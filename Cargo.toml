@@ -12,3 +12,4 @@ keywords = ["risc", "rtos"]
 categories = ["embedded", "no-std"]
 
 [dependencies]
+riscv = "0.9.0"
