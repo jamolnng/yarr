@@ -1,1 +1,0 @@
-PROVIDE(__global_pointer$ = . + 0x800);
