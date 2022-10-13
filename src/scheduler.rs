@@ -68,8 +68,7 @@ pub struct RealTime<const N: usize> {
 
 impl<const N: usize> Scheduler<RealTimeProcess> for RealTime<N> {
     fn next(&mut self) -> &RealTimeProcess {
-        let next = self
-            .processes
+        self.processes
             .iter()
             .filter(|p| {
                 if let Some(p) = p {
@@ -77,11 +76,8 @@ impl<const N: usize> Scheduler<RealTimeProcess> for RealTime<N> {
                 }
                 false
             })
-            .max_by_key(|p| p.as_ref().unwrap().priority());
-        if let Some(next) = next {
-            return next.as_ref().unwrap();
-        }
-        self.idle()
+            .max_by_key(|p| p.as_ref().unwrap().priority())
+            .map_or(self.idle(), |p| p.as_ref().unwrap())
     }
 
     fn idle(&self) -> &RealTimeProcess {
