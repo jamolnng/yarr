@@ -107,8 +107,11 @@ impl<const N: usize> RealTime<N> {
         {
             if let Some(p) = self.processes.iter_mut().find(|p| p.is_none()) {
                 p.replace(proc);
+            } else {
+                // no processes left
             }
         } else {
+            // cannot have two processes with the same priority
         }
     }
 }
