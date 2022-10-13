@@ -13,6 +13,10 @@ use crate::scheduler::Scheduler;
 
 #[entry]
 fn main() -> ! {
-    let sched = scheduler::RealTime{};
+    let mut sched = scheduler::RoundRobin::<10>::new();
+
+    let test = process::RoundRobinProcess::new(|| loop {});
+    sched.queue(test);
+
     sched.start();
 }
