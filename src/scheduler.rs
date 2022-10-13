@@ -10,16 +10,18 @@ pub trait Scheduler<T: Process> {
     }
 
     fn idle(&self) -> &T;
+
+    fn queue(&mut self, proc: T) -> bool;
 }
 
-pub struct RoundRobin<const N: usize> {
-    processes: [Option<RoundRobinProcess>; N],
+pub struct RoundRobin<'a, const N: usize> {
+    processes: [Option<RoundRobinProcess<'a>>; N],
     index: usize,
-    idle: RoundRobinProcess,
+    idle: RoundRobinProcess<'a>,
 }
 
-impl<const N: usize> Scheduler<RoundRobinProcess> for RoundRobin<N> {
-    fn next(&mut self) -> &RoundRobinProcess {
+impl<'a, const N: usize> Scheduler<RoundRobinProcess<'a>> for RoundRobin<'a, N> {
+    fn next(&mut self) -> &RoundRobinProcess<'a> {
         let next = self
             .processes
             .iter()
@@ -40,12 +42,20 @@ impl<const N: usize> Scheduler<RoundRobinProcess> for RoundRobin<N> {
         }
     }
 
-    fn idle(&self) -> &RoundRobinProcess {
+    fn idle(&self) -> &RoundRobinProcess<'a> {
         &self.idle
+    }
+
+    fn queue(&mut self, proc: RoundRobinProcess<'a>) -> bool {
+        if let Some(p) = self.processes.iter_mut().find(|p| p.is_none()) {
+            p.replace(proc);
+            return true;
+        }
+        false
     }
 }
 
-impl<const N: usize> RoundRobin<N> {
+impl<'a, const N: usize> RoundRobin<'a, N> {
     pub fn new() -> Self {
         Self {
             processes: [(); N].map(|_| Option::<RoundRobinProcess>::default()),
@@ -53,21 +63,15 @@ impl<const N: usize> RoundRobin<N> {
             index: 0,
         }
     }
-
-    pub fn queue(&mut self, proc: RoundRobinProcess) {
-        if let Some(p) = self.processes.iter_mut().find(|p| p.is_none()) {
-            p.replace(proc);
-        }
-    }
 }
 
-pub struct RealTime<const N: usize> {
-    processes: [Option<RealTimeProcess>; N],
-    idle: RealTimeProcess,
+pub struct RealTime<'a, const N: usize> {
+    processes: [Option<RealTimeProcess<'a>>; N],
+    idle: RealTimeProcess<'a>,
 }
 
-impl<const N: usize> Scheduler<RealTimeProcess> for RealTime<N> {
-    fn next(&mut self) -> &RealTimeProcess {
+impl<'a, const N: usize> Scheduler<RealTimeProcess<'a>> for RealTime<'a, N> {
+    fn next(&mut self) -> &RealTimeProcess<'a> {
         self.processes
             .iter()
             .filter(|p| {
@@ -80,20 +84,11 @@ impl<const N: usize> Scheduler<RealTimeProcess> for RealTime<N> {
             .map_or(self.idle(), |p| p.as_ref().unwrap())
     }
 
-    fn idle(&self) -> &RealTimeProcess {
+    fn idle(&self) -> &RealTimeProcess<'a> {
         &self.idle
     }
-}
 
-impl<const N: usize> RealTime<N> {
-    pub fn new() -> Self {
-        Self {
-            processes: [(); N].map(|_| Option::<RealTimeProcess>::default()),
-            idle: RealTimeProcess::idle(),
-        }
-    }
-
-    pub fn queue(&mut self, proc: RealTimeProcess) {
+    fn queue(&mut self, proc: RealTimeProcess<'a>) -> bool {
         if self
             .processes
             .iter()
@@ -107,11 +102,22 @@ impl<const N: usize> RealTime<N> {
         {
             if let Some(p) = self.processes.iter_mut().find(|p| p.is_none()) {
                 p.replace(proc);
+                return true;
             } else {
                 // no processes left
             }
         } else {
             // cannot have two processes with the same priority
+        }
+        false
+    }
+}
+
+impl<'a, const N: usize> RealTime<'a, N> {
+    pub fn new() -> Self {
+        Self {
+            processes: [(); N].map(|_| Option::<RealTimeProcess>::default()),
+            idle: RealTimeProcess::idle(),
         }
     }
 }
