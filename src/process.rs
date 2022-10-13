@@ -10,7 +10,7 @@ pub trait Process {
 pub struct RoundRobinProcess<'a> {
     exec: fn() -> !,
     ready: bool,
-    _stack: Stack<'a>,
+    _stack: &'a mut Stack<'a>,
 }
 
 impl<'a> Process for RoundRobinProcess<'a> {
@@ -24,7 +24,7 @@ impl<'a> Process for RoundRobinProcess<'a> {
 }
 
 impl<'a> RoundRobinProcess<'a> {
-    pub fn new(exec: fn() -> !, _stack: Stack<'a>) -> Self {
+    pub fn new(exec: fn() -> !, _stack: &'a mut Stack<'a>) -> Self {
         Self {
             exec,
             ready: true,
@@ -32,7 +32,7 @@ impl<'a> RoundRobinProcess<'a> {
         }
     }
 
-    pub fn idle() -> Self {
+    pub fn idle(stack: &'a mut Stack<'a>) -> Self {
         Self {
             exec: || loop {
                 unsafe {
@@ -40,7 +40,7 @@ impl<'a> RoundRobinProcess<'a> {
                 }
             },
             ready: true,
-            _stack: Stack::new(&[0 as usize; 64]),
+            _stack: stack,
         }
     }
 }
@@ -49,7 +49,7 @@ pub struct RealTimeProcess<'a> {
     exec: fn() -> !,
     priority: u32,
     ready: bool,
-    _stack: Stack<'a>,
+    _stack: &'a mut Stack<'a>,
 }
 
 impl<'a> Process for RealTimeProcess<'a> {
@@ -63,7 +63,7 @@ impl<'a> Process for RealTimeProcess<'a> {
 }
 
 impl<'a> RealTimeProcess<'a> {
-    pub fn new(exec: fn() -> !, priority: u32, _stack: Stack<'a>) -> Self {
+    pub fn new(exec: fn() -> !, priority: u32, _stack: &'a mut Stack<'a>) -> Self {
         Self {
             exec,
             priority,
@@ -72,16 +72,16 @@ impl<'a> RealTimeProcess<'a> {
         }
     }
 
-    pub fn idle() -> Self {
+    pub fn idle(stack: &'a mut Stack<'a>) -> Self {
         Self {
             exec: || loop {
                 unsafe {
                     wfi();
                 }
             },
-            ready: true,
             priority: 0,
-            _stack: Stack::new(&[0 as usize; 64]),
+            ready: true,
+            _stack: stack,
         }
     }
 

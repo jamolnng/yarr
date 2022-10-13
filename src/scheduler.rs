@@ -1,4 +1,7 @@
-use crate::process::{Process, RealTimeProcess, RoundRobinProcess};
+use crate::{
+    process::{Process, RealTimeProcess, RoundRobinProcess},
+    stack::Stack,
+};
 
 pub trait Scheduler<T: Process> {
     fn next(&mut self) -> &T;
@@ -56,10 +59,10 @@ impl<'a, const N: usize> Scheduler<RoundRobinProcess<'a>> for RoundRobin<'a, N> 
 }
 
 impl<'a, const N: usize> RoundRobin<'a, N> {
-    pub fn new() -> Self {
+    pub fn new(idle_stack: &'a mut Stack<'a>) -> Self {
         Self {
             processes: [(); N].map(|_| Option::<RoundRobinProcess>::default()),
-            idle: RoundRobinProcess::idle(),
+            idle: RoundRobinProcess::idle(idle_stack),
             index: 0,
         }
     }
@@ -114,10 +117,10 @@ impl<'a, const N: usize> Scheduler<RealTimeProcess<'a>> for RealTime<'a, N> {
 }
 
 impl<'a, const N: usize> RealTime<'a, N> {
-    pub fn new() -> Self {
+    pub fn new(idle_stack: &'a mut Stack<'a>) -> Self {
         Self {
             processes: [(); N].map(|_| Option::<RealTimeProcess>::default()),
-            idle: RealTimeProcess::idle(),
+            idle: RealTimeProcess::idle(idle_stack),
         }
     }
 }

@@ -15,14 +15,18 @@ use stack::Stack;
 
 #[entry]
 fn main() -> ! {
-    let test_stack = [0 as usize; 128];
+    let mut idle_stack_data = [0 as usize; 64];
+    let mut idle_stack = Stack::new(&mut idle_stack_data);
 
-    let mut sched = scheduler::RoundRobin::<10>::new();
+    let mut test_stack_data = [0 as usize; 128];
+    let mut test_stack = Stack::new(&mut test_stack_data);
+
+    let mut sched = scheduler::RoundRobin::<10>::new(&mut idle_stack);
     sched.queue(process::RoundRobinProcess::new(
         || loop {
             // TODO
         },
-        Stack::new(&test_stack),
+        &mut test_stack,
     ));
     sched.start();
 }

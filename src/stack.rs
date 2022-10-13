@@ -1,9 +1,9 @@
 pub struct Stack<'a> {
-    _data: &'a [usize],
+    _data: &'a mut [usize],
 }
 
 impl<'a> Stack<'a> {
-    pub fn new(_data: &'a [usize]) -> Self {
+    pub fn new(_data: &'a mut [usize]) -> Self {
         Self { _data }
     }
 }
