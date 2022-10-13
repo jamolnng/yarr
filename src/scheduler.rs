@@ -14,8 +14,8 @@ pub trait Scheduler<T: Process> {
 
 pub struct RoundRobin<const N: usize> {
     processes: [Option<RoundRobinProcess>; N],
-    idle: RoundRobinProcess,
     index: usize,
+    idle: RoundRobinProcess,
 }
 
 impl<const N: usize> Scheduler<RoundRobinProcess> for RoundRobin<N> {
@@ -98,8 +98,21 @@ impl<const N: usize> RealTime<N> {
     }
 
     pub fn queue(&mut self, proc: RealTimeProcess) {
-        if let Some(p) = self.processes.iter_mut().find(|p| p.is_none()) {
-            p.replace(proc);
+        if self
+            .processes
+            .iter()
+            .find(|p| {
+                if let Some(p) = p {
+                    return p.priority() == proc.priority();
+                }
+                false
+            })
+            .is_none()
+        {
+            if let Some(p) = self.processes.iter_mut().find(|p| p.is_none()) {
+                p.replace(proc);
+            }
+        } else {
         }
     }
 }

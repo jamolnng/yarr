@@ -1,4 +1,9 @@
 use riscv::asm::wfi;
+
+use crate::stack::Stack;
+
+static IDLE_STACK: &'static [usize] = &[0; 64];
+
 pub trait Process {
     fn exec(&self) -> !;
     fn ready(&self) -> bool;
@@ -7,6 +12,7 @@ pub trait Process {
 pub struct RoundRobinProcess {
     exec: fn() -> !,
     ready: bool,
+    _stack: Stack,
 }
 
 impl Process for RoundRobinProcess {
@@ -20,8 +26,12 @@ impl Process for RoundRobinProcess {
 }
 
 impl RoundRobinProcess {
-    pub fn new(exec: fn() -> !) -> Self {
-        Self { exec, ready: true }
+    pub fn new(exec: fn() -> !, _stack: Stack) -> Self {
+        Self {
+            exec,
+            ready: true,
+            _stack,
+        }
     }
 
     pub fn idle() -> Self {
@@ -32,6 +42,7 @@ impl RoundRobinProcess {
                 }
             },
             ready: true,
+            _stack: Stack::new(IDLE_STACK),
         }
     }
 }
@@ -40,6 +51,7 @@ pub struct RealTimeProcess {
     exec: fn() -> !,
     priority: u32,
     ready: bool,
+    _stack: Stack,
 }
 
 impl Process for RealTimeProcess {
@@ -53,11 +65,12 @@ impl Process for RealTimeProcess {
 }
 
 impl RealTimeProcess {
-    pub fn new(exec: fn() -> !, priority: u32) -> Self {
+    pub fn new(exec: fn() -> !, priority: u32, _stack: Stack) -> Self {
         Self {
             exec,
             priority,
             ready: true,
+            _stack,
         }
     }
 
@@ -70,6 +83,7 @@ impl RealTimeProcess {
             },
             ready: true,
             priority: 0,
+            _stack: Stack::new(IDLE_STACK),
         }
     }
 
