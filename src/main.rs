@@ -11,22 +11,25 @@ pub mod scheduler;
 pub mod stack;
 
 use scheduler::Scheduler;
-use stack::Stack;
 
 #[entry]
 fn main() -> ! {
-    let mut idle_stack_data = [0 as usize; 64];
-    let mut idle_stack = Stack::new(&mut idle_stack_data);
+    let mut idle_data = [0; 64];
+    let mut test_data = [0; 128];
+    let mut test_data2 = [0; 256];
 
-    let mut test_stack_data = [0 as usize; 128];
-    let mut test_stack = Stack::new(&mut test_stack_data);
-
-    let mut sched = scheduler::RoundRobin::<10>::new(&mut idle_stack);
+    let mut sched = scheduler::RoundRobin::<10>::new(&mut idle_data);
     sched.queue(process::RoundRobinProcess::new(
         || loop {
             // TODO
         },
-        &mut test_stack,
+        &mut test_data,
+    ));
+    sched.queue(process::RoundRobinProcess::new(
+        || loop {
+            // TODO
+        },
+        &mut test_data2,
     ));
     sched.start();
 }

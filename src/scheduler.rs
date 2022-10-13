@@ -1,7 +1,4 @@
-use crate::{
-    process::{Process, RealTimeProcess, RoundRobinProcess},
-    stack::Stack,
-};
+use crate::process::{Process, RealTimeProcess, RoundRobinProcess};
 
 pub trait Scheduler<T: Process> {
     fn next(&mut self) -> &T;
@@ -25,7 +22,7 @@ pub struct RoundRobin<'a, const N: usize> {
 
 impl<'a, const N: usize> Scheduler<RoundRobinProcess<'a>> for RoundRobin<'a, N> {
     fn next(&mut self) -> &RoundRobinProcess<'a> {
-        let next = self
+        if let Some(next) = self
             .processes
             .iter()
             .cycle()
@@ -36,13 +33,12 @@ impl<'a, const N: usize> Scheduler<RoundRobinProcess<'a>> for RoundRobin<'a, N> 
                     return p.ready();
                 }
                 false
-            });
-        if let Some(next) = next {
+            })
+        {
             self.index = (self.index + next + 1) % N;
             return self.processes[(self.index + next) % N].as_ref().unwrap();
-        } else {
-            return self.idle();
         }
+        self.idle()
     }
 
     fn idle(&self) -> &RoundRobinProcess<'a> {
@@ -59,11 +55,11 @@ impl<'a, const N: usize> Scheduler<RoundRobinProcess<'a>> for RoundRobin<'a, N> 
 }
 
 impl<'a, const N: usize> RoundRobin<'a, N> {
-    pub fn new(idle_stack: &'a mut Stack<'a>) -> Self {
+    pub fn new(idle_stack: &'a mut [usize]) -> Self {
         Self {
-            processes: [(); N].map(|_| Option::<RoundRobinProcess>::default()),
-            idle: RoundRobinProcess::idle(idle_stack),
+            processes: [(); N].map(|_| Option::<RoundRobinProcess<'a>>::default()),
             index: 0,
+            idle: RoundRobinProcess::idle(idle_stack),
         }
     }
 }
@@ -117,9 +113,9 @@ impl<'a, const N: usize> Scheduler<RealTimeProcess<'a>> for RealTime<'a, N> {
 }
 
 impl<'a, const N: usize> RealTime<'a, N> {
-    pub fn new(idle_stack: &'a mut Stack<'a>) -> Self {
+    pub fn new(idle_stack: &'a mut [usize]) -> Self {
         Self {
-            processes: [(); N].map(|_| Option::<RealTimeProcess>::default()),
+            processes: [(); N].map(|_| Option::<RealTimeProcess<'a>>::default()),
             idle: RealTimeProcess::idle(idle_stack),
         }
     }

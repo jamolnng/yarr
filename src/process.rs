@@ -2,6 +2,14 @@ use riscv::asm::wfi;
 
 use crate::stack::Stack;
 
+fn idle() -> ! {
+    loop {
+        unsafe {
+            wfi();
+        }
+    }
+}
+
 pub trait Process {
     fn exec(&self) -> !;
     fn ready(&self) -> bool;
@@ -10,7 +18,8 @@ pub trait Process {
 pub struct RoundRobinProcess<'a> {
     exec: fn() -> !,
     ready: bool,
-    _stack: &'a mut Stack<'a>,
+    #[allow(dead_code)]
+    stack: Stack<'a>,
 }
 
 impl<'a> Process for RoundRobinProcess<'a> {
@@ -24,23 +33,19 @@ impl<'a> Process for RoundRobinProcess<'a> {
 }
 
 impl<'a> RoundRobinProcess<'a> {
-    pub fn new(exec: fn() -> !, _stack: &'a mut Stack<'a>) -> Self {
+    pub fn new(exec: fn() -> !, stack: &'a mut [usize]) -> Self {
         Self {
             exec,
             ready: true,
-            _stack,
+            stack: Stack::new(stack),
         }
     }
 
-    pub fn idle(stack: &'a mut Stack<'a>) -> Self {
+    pub fn idle(stack: &'a mut [usize]) -> Self {
         Self {
-            exec: || loop {
-                unsafe {
-                    wfi();
-                }
-            },
+            exec: idle,
             ready: true,
-            _stack: stack,
+            stack: Stack::new(stack),
         }
     }
 }
@@ -49,7 +54,8 @@ pub struct RealTimeProcess<'a> {
     exec: fn() -> !,
     priority: u32,
     ready: bool,
-    _stack: &'a mut Stack<'a>,
+    #[allow(dead_code)]
+    stack: Stack<'a>,
 }
 
 impl<'a> Process for RealTimeProcess<'a> {
@@ -63,25 +69,21 @@ impl<'a> Process for RealTimeProcess<'a> {
 }
 
 impl<'a> RealTimeProcess<'a> {
-    pub fn new(exec: fn() -> !, priority: u32, _stack: &'a mut Stack<'a>) -> Self {
+    pub fn new(exec: fn() -> !, priority: u32, stack: &'a mut [usize]) -> Self {
         Self {
             exec,
             priority,
             ready: true,
-            _stack,
+            stack: Stack::new(stack),
         }
     }
 
-    pub fn idle(stack: &'a mut Stack<'a>) -> Self {
+    pub fn idle(stack: &'a mut [usize]) -> Self {
         Self {
-            exec: || loop {
-                unsafe {
-                    wfi();
-                }
-            },
+            exec: idle,
             priority: 0,
             ready: true,
-            _stack: stack,
+            stack: Stack::new(stack),
         }
     }
 

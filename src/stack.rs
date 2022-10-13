@@ -1,9 +1,10 @@
 pub struct Stack<'a> {
-    _data: &'a mut [usize],
+    #[allow(dead_code)]
+    data: &'a mut [usize],
 }
 
 impl<'a> Stack<'a> {
-    pub fn new(_data: &'a mut [usize]) -> Self {
-        Self { _data }
+    pub fn new(data: &'a mut [usize]) -> Self {
+        Self { data }
     }
 }
