@@ -6,13 +6,16 @@ pub trait Scheduler<'a, T: Process> {
     fn schedule(&mut self);
 
     fn start(&mut self) -> ! {
+        self.schedule();
+        // TODO: set timer
+        // TODO: enable timer interrupts
+        // TODO: enable interrupts
         self.start_first_task()
     }
 
     fn idle(&self) -> &'a T;
 
     fn start_first_task(&mut self) -> ! {
-        self.schedule();
         unsafe {
             asm!(
                 "csrw mtvec, {0}",
