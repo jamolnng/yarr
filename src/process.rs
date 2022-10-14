@@ -11,22 +11,16 @@ fn idle() -> ! {
 }
 
 pub trait Process {
-    fn exec(&self) -> !;
     fn ready(&self) -> bool;
 }
 
 pub struct RoundRobinProcess<'a> {
-    exec: fn() -> !,
     ready: bool,
     #[allow(dead_code)]
     stack: Stack<'a>,
 }
 
 impl<'a> Process for RoundRobinProcess<'a> {
-    fn exec(&self) -> ! {
-        (self.exec)()
-    }
-
     fn ready(&self) -> bool {
         self.ready
     }
@@ -34,24 +28,19 @@ impl<'a> Process for RoundRobinProcess<'a> {
 
 impl<'a> RoundRobinProcess<'a> {
     pub fn new(exec: fn() -> !, stack: &'a mut [usize]) -> Self {
-        Self {
-            exec,
-            ready: true,
-            stack: Stack::new(stack),
-        }
+        let mut stack = Stack::new(stack);
+        stack.init(exec);
+        Self { ready: true, stack }
     }
 
     pub fn idle(stack: &'a mut [usize]) -> Self {
-        Self {
-            exec: idle,
-            ready: true,
-            stack: Stack::new(stack),
-        }
+        let mut stack = Stack::new(stack);
+        stack.init(idle);
+        Self { ready: true, stack }
     }
 }
 
 pub struct RealTimeProcess<'a> {
-    exec: fn() -> !,
     priority: u32,
     ready: bool,
     #[allow(dead_code)]
@@ -59,10 +48,6 @@ pub struct RealTimeProcess<'a> {
 }
 
 impl<'a> Process for RealTimeProcess<'a> {
-    fn exec(&self) -> ! {
-        (self.exec)()
-    }
-
     fn ready(&self) -> bool {
         self.ready
     }
@@ -70,20 +55,22 @@ impl<'a> Process for RealTimeProcess<'a> {
 
 impl<'a> RealTimeProcess<'a> {
     pub fn new(exec: fn() -> !, priority: u32, stack: &'a mut [usize]) -> Self {
+        let mut stack = Stack::new(stack);
+        stack.init(exec);
         Self {
-            exec,
             priority,
             ready: true,
-            stack: Stack::new(stack),
+            stack,
         }
     }
 
     pub fn idle(stack: &'a mut [usize]) -> Self {
+        let mut stack = Stack::new(stack);
+        stack.init(idle);
         Self {
-            exec: idle,
             priority: 0,
             ready: true,
-            stack: Stack::new(stack),
+            stack,
         }
     }
 
