@@ -17,7 +17,6 @@ pub trait Process {
 
 pub struct RoundRobinProcess<'a> {
     ready: bool,
-    #[allow(dead_code)]
     stack: Stack<'a>,
 }
 
@@ -48,7 +47,6 @@ impl<'a> RoundRobinProcess<'a> {
 pub struct RealTimeProcess<'a> {
     priority: u32,
     ready: bool,
-    #[allow(dead_code)]
     stack: Stack<'a>,
 }
 
