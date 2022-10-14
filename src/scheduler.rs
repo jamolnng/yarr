@@ -6,13 +6,12 @@ pub trait Scheduler<'a, T: Process> {
     fn schedule(&mut self);
 
     fn start(&mut self) -> ! {
-        self.start_first_task();
-        unreachable!();
+        self.start_first_task()
     }
 
     fn idle(&self) -> &'a T;
 
-    fn start_first_task(&mut self) {
+    fn start_first_task(&mut self) -> ! {
         self.schedule();
         unsafe {
             asm!(
@@ -69,6 +68,7 @@ pub trait Scheduler<'a, T: Process> {
                 asm!("ret");
             }
         }
+        unreachable!()
     }
 
     fn current(&self) -> &T;
