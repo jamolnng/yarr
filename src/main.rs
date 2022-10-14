@@ -16,6 +16,14 @@ use scheduler::Scheduler;
 
 const CLINT_REG_MTIMECMP: usize = 0x4000;
 const CLINT_CTRL_ADDR: usize = 0x02000000;
+const CLINT_REG_MTIME: usize = 0xBFF8;
+
+const GPIO_CTRL_ADDR: usize = 0x10012000;
+const GPIO_REG_OUTPUT_VAL: usize = 0x0C;
+
+const GREEN_LED: usize = 0x00080000;
+// const BLUE_LED: usize = 0x00200000;
+const RED_LED: usize = 0x00400000;
 
 unsafe fn mmio_write(address: usize, offset: usize, value: usize) {
     let reg = address as *mut usize;
@@ -36,8 +44,8 @@ impl clock::Clock for HiFiveRTC {
 
     fn ticks() -> u64 {
         unsafe {
-            let lo = mmio_read(CLINT_CTRL_ADDR, CLINT_REG_MTIMECMP);
-            let hi = mmio_read(CLINT_CTRL_ADDR, CLINT_REG_MTIMECMP + 4);
+            let lo = mmio_read(CLINT_CTRL_ADDR, CLINT_REG_MTIME);
+            let hi = mmio_read(CLINT_CTRL_ADDR, CLINT_REG_MTIME + 4);
             ((hi as u64) << 32) | lo as u64
         }
     }
@@ -64,13 +72,23 @@ fn main() -> ! {
     let mut processes = [
         process::RoundRobinProcess::new(
             || loop {
-                // TODO
+                unsafe {
+                    let mut gpio = mmio_read(GPIO_CTRL_ADDR, GPIO_REG_OUTPUT_VAL);
+                    gpio ^= RED_LED;
+                    mmio_write(GPIO_CTRL_ADDR, GPIO_REG_OUTPUT_VAL, gpio)
+                }
+                for _ in 0..250_000 {}
             },
             &mut test_data,
         ),
         process::RoundRobinProcess::new(
             || loop {
-                // TODO
+                unsafe {
+                    let mut gpio = mmio_read(GPIO_CTRL_ADDR, GPIO_REG_OUTPUT_VAL);
+                    gpio ^= GREEN_LED;
+                    mmio_write(GPIO_CTRL_ADDR, GPIO_REG_OUTPUT_VAL, gpio)
+                }
+                for _ in 0..1_000_000 {}
             },
             &mut test_data2,
         ),
