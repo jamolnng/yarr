@@ -12,6 +12,7 @@ fn idle() -> ! {
 
 pub trait Process {
     fn ready(&self) -> bool;
+    fn stack(&self) -> &Stack;
 }
 
 pub struct RoundRobinProcess<'a> {
@@ -23,6 +24,10 @@ pub struct RoundRobinProcess<'a> {
 impl<'a> Process for RoundRobinProcess<'a> {
     fn ready(&self) -> bool {
         self.ready
+    }
+
+    fn stack(&self) -> &Stack {
+        &self.stack
     }
 }
 
@@ -50,6 +55,10 @@ pub struct RealTimeProcess<'a> {
 impl<'a> Process for RealTimeProcess<'a> {
     fn ready(&self) -> bool {
         self.ready
+    }
+
+    fn stack(&self) -> &Stack {
+        &self.stack
     }
 }
 

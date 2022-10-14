@@ -6,17 +6,10 @@ pub struct Stack<'a> {
     data: &'a mut [usize],
 }
 
-#[cfg(target_arch = "riscv32")]
-const WORD_SIZE: usize = 4;
-
-#[cfg(target_arch = "riscv64")]
-const WORD_SIZE: usize = 8;
-
 impl<'a> Stack<'a> {
     pub fn new(data: &'a mut [usize]) -> Self {
-        let stack_ptr = ((&mut (data[0]) as *mut usize as usize)) / WORD_SIZE + data.len(); // this is an ugly hack
         Self {
-            stack_ptr: stack_ptr,
+            stack_ptr: data.len(),
             data,
         }
     }
@@ -34,9 +27,12 @@ impl<'a> Stack<'a> {
                 out(reg) mstatus,
             );
         }
-        self.stack_ptr -= 2;
-        self.data[self.stack_ptr + 1] = &exec as *const fn() -> ! as *const usize as usize;
-        self.data[self.stack_ptr] = mstatus;
-        self.stack_ptr -= 28;
+        self.data[self.stack_ptr - 1] = &exec as *const fn() -> ! as *const usize as usize;
+        self.data[self.stack_ptr - 2] = mstatus;
+        self.stack_ptr -= 30;
+    }
+
+    pub fn ptr(&self) -> usize {
+        &self.data[self.stack_ptr] as *const usize as usize
     }
 }

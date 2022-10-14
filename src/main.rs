@@ -18,18 +18,22 @@ fn main() -> ! {
     let mut test_data = [0; 128];
     let mut test_data2 = [0; 256];
 
-    let mut sched = scheduler::RoundRobin::<10>::new(&mut idle_data);
-    sched.queue(process::RoundRobinProcess::new(
-        || loop {
-            // TODO
-        },
-        &mut test_data,
-    ));
-    sched.queue(process::RoundRobinProcess::new(
-        || loop {
-            // TODO
-        },
-        &mut test_data2,
-    ));
+    let idle = process::RoundRobinProcess::idle(&mut idle_data);
+    let mut processes = [
+        process::RoundRobinProcess::new(
+            || loop {
+                // TODO
+            },
+            &mut test_data,
+        ),
+        process::RoundRobinProcess::new(
+            || loop {
+                // TODO
+            },
+            &mut test_data2,
+        ),
+    ];
+
+    let mut sched = scheduler::RoundRobin::new(&mut processes, &idle);
     sched.start();
 }

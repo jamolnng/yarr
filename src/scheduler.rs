@@ -1,122 +1,111 @@
 use crate::process::{Process, RealTimeProcess, RoundRobinProcess};
 
-pub trait Scheduler<T: Process> {
-    fn next(&mut self) -> &T;
+use core::arch::asm;
 
-    fn swap(&mut self, _proc: T) {}
+pub trait Scheduler<'a, T: Process> {
+    fn schedule(&mut self);
 
     fn start(&mut self) -> ! {
+        self.start_first_task()
+    }
+
+    fn idle(&self) -> &'a T;
+
+    fn start_first_task(&self) -> ! {
+        unsafe {
+            asm!(
+                "csrw mtvec, {0}",
+                in(reg) &Self::trap_vec,
+            );
+
+            asm!(
+                "lw sp, 0({0})",
+                in(reg) self.current().stack().ptr()
+            );
+        }
         loop {}
     }
 
-    fn idle(&self) -> &T;
+    fn current(&self) -> &T;
 
-    fn queue(&mut self, proc: T) -> bool;
+    fn trap_vec() {}
 }
 
-pub struct RoundRobin<'a, const N: usize> {
-    processes: [Option<RoundRobinProcess<'a>>; N],
+pub struct RoundRobin<'a> {
     index: usize,
-    idle: RoundRobinProcess<'a>,
+    idle: &'a RoundRobinProcess<'a>,
+    current: &'a RoundRobinProcess<'a>,
+    processes: &'a [RoundRobinProcess<'a>],
 }
 
-impl<'a, const N: usize> Scheduler<RoundRobinProcess<'a>> for RoundRobin<'a, N> {
-    fn next(&mut self) -> &RoundRobinProcess<'a> {
+impl<'a> Scheduler<'a, RoundRobinProcess<'a>> for RoundRobin<'a> {
+    fn schedule(&mut self) {
         if let Some(next) = self
             .processes
             .iter()
             .cycle()
             .skip(self.index)
-            .take(N)
-            .position(|p| {
-                if let Some(p) = p {
-                    return p.ready();
-                }
-                false
-            })
+            .take(self.processes.len())
+            .position(|p| p.ready())
         {
-            self.index = (self.index + next + 1) % N;
-            return self.processes[(self.index + next) % N].as_ref().unwrap();
+            self.index = (self.index + next + 1) % self.processes.len();
+            self.current = &self.processes[(self.index + next) % self.processes.len()];
+        } else {
+            self.current = self.idle();
         }
-        self.idle()
     }
 
-    fn idle(&self) -> &RoundRobinProcess<'a> {
+    fn idle(&self) -> &'a RoundRobinProcess<'a> {
         &self.idle
     }
 
-    fn queue(&mut self, proc: RoundRobinProcess<'a>) -> bool {
-        if let Some(p) = self.processes.iter_mut().find(|p| p.is_none()) {
-            p.replace(proc);
-            return true;
-        }
-        false
+    fn current(&self) -> &RoundRobinProcess<'a> {
+        self.current
     }
 }
 
-impl<'a, const N: usize> RoundRobin<'a, N> {
-    pub fn new(idle_stack: &'a mut [usize]) -> Self {
+impl<'a> RoundRobin<'a> {
+    pub fn new(processes: &'a [RoundRobinProcess<'a>], idle: &'a RoundRobinProcess<'a>) -> Self {
         Self {
-            processes: [(); N].map(|_| Option::<RoundRobinProcess<'a>>::default()),
             index: 0,
-            idle: RoundRobinProcess::idle(idle_stack),
+            idle,
+            current: idle,
+            processes,
         }
     }
 }
 
-pub struct RealTime<'a, const N: usize> {
-    processes: [Option<RealTimeProcess<'a>>; N],
-    idle: RealTimeProcess<'a>,
+pub struct RealTime<'a> {
+    idle: &'a RealTimeProcess<'a>,
+    current: &'a RealTimeProcess<'a>,
+    processes: &'a [RealTimeProcess<'a>],
 }
 
-impl<'a, const N: usize> Scheduler<RealTimeProcess<'a>> for RealTime<'a, N> {
-    fn next(&mut self) -> &RealTimeProcess<'a> {
-        self.processes
-            .iter()
-            .filter(|p| {
-                if let Some(p) = p {
-                    return p.ready();
-                }
-                false
-            })
-            .max_by_key(|p| p.as_ref().unwrap().priority())
-            .map_or(self.idle(), |p| p.as_ref().unwrap())
-    }
-
-    fn idle(&self) -> &RealTimeProcess<'a> {
-        &self.idle
-    }
-
-    fn queue(&mut self, proc: RealTimeProcess<'a>) -> bool {
-        if self
+impl<'a> Scheduler<'a, RealTimeProcess<'a>> for RealTime<'a> {
+    fn schedule(&mut self) {
+        self.current = self
             .processes
             .iter()
-            .find(|p| {
-                if let Some(p) = p {
-                    return p.priority() == proc.priority();
-                }
-                false
-            })
-            .is_none()
-        {
-            if let Some(p) = self.processes.iter_mut().find(|p| p.is_none()) {
-                p.replace(proc);
-                return true;
-            } else {
-                // no processes left
-            }
-        } else {
-            // cannot have two processes with the same priority
-        }
-        false
+            .filter(|p| p.ready())
+            .max_by_key(|p| p.priority())
+            .unwrap_or(self.idle());
+    }
+
+    fn idle(&self) -> &'a RealTimeProcess<'a> {
+        &self.idle
+    }
+
+    fn current(&self) -> &RealTimeProcess<'a> {
+        self.current
     }
 }
 
-impl<'a, const N: usize> RealTime<'a, N> {
-    pub fn new(idle_stack: &'a mut [usize]) -> Self {
+impl<'a> RealTime<'a> {
+    pub fn new(processes: &'a [RealTimeProcess<'a>], idle: &'a RealTimeProcess<'a>) -> Self {
         Self {
-            processes: [(); N].map(|_| Option::<RealTimeProcess<'a>>::default()),
-            idle: RealTimeProcess::idle(idle_stack),
+            idle,
+            current: idle,
+            processes,
         }
     }
 }
