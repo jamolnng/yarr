@@ -14,7 +14,7 @@ const WORD_SIZE: usize = 8;
 
 impl<'a> Stack<'a> {
     pub fn new(data: &'a mut [usize]) -> Self {
-        let stack_ptr = ((&mut (data[data.len() - 1]) as *mut usize as usize) + WORD_SIZE) / WORD_SIZE; // this is an ugly hack
+        let stack_ptr = ((&mut (data[0]) as *mut usize as usize)) / WORD_SIZE + data.len(); // this is an ugly hack
         Self {
             stack_ptr: stack_ptr,
             data,
