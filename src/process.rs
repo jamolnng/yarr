@@ -1,11 +1,9 @@
-use riscv::asm::wfi;
-
 use crate::stack::Stack;
 
 fn idle() -> ! {
     loop {
         unsafe {
-            wfi();
+            riscv::asm::wfi();
         }
     }
 }
