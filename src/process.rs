@@ -3,7 +3,7 @@ use crate::stack::Stack;
 fn idle() -> ! {
     loop {
         unsafe {
-            riscv::asm::wfi();
+            core::arch::asm!("wfi");
         }
     }
 }

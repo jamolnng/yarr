@@ -1,12 +1,9 @@
 #![no_std]
 #![no_main]
 
-extern crate panic_halt;
-extern crate riscv_rt;
-
-use riscv_rt::entry;
-
+pub mod asm;
 pub mod clock;
+pub mod init;
 pub mod process;
 pub mod scheduler;
 pub mod stack;
@@ -62,7 +59,18 @@ impl clock::Clock for HiFiveRTC {
     }
 }
 
-#[entry]
+#[link_section = ".init.rust"]
+#[no_mangle]
+extern "C" fn _start_rust() -> ! {
+    start_rust()
+}
+
+fn start_rust() -> ! {
+    init::init_data();
+    init::zero_bss();
+    main()
+}
+
 fn main() -> ! {
     let mut idle_data = [0; 64];
     let mut test_data = [0; 128];
@@ -96,4 +104,17 @@ fn main() -> ! {
 
     let mut sched = scheduler::RoundRobin::<HiFiveRTC>::new(1000, &mut processes, &idle);
     sched.start();
+}
+
+#[no_mangle]
+extern "C" fn eh_personality() {}
+
+#[panic_handler]
+fn panic(_info: &core::panic::PanicInfo) -> ! {
+    loop {
+        // core::sync::atomic::compiler_fence(core::sync::atomic::Ordering::SeqCst);
+        unsafe {
+            core::arch::asm!("wfi");
+        }
+    }
 }

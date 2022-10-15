@@ -12,10 +12,14 @@ pub struct Timer<C: Clock> {
 
 impl<C: Clock> Timer<C> {
     pub fn new(tick_rate: u64) -> Self {
+        let freq = C::freq();
+        let tick_min = freq / tick_rate;
+        let tick_max = tick_min + 1;
+        let tick_mod = tick_rate - (freq % tick_rate);
         Self {
-            tick_min: 0,
-            tick_max: 0,
-            tick_mod: 0,
+            tick_min,
+            tick_max,
+            tick_mod,
             tick_count: 0,
             tick_rate,
 
@@ -24,12 +28,6 @@ impl<C: Clock> Timer<C> {
     }
 
     pub fn set(&mut self) {
-        if self.tick_min == 0 {
-            let freq = C::freq();
-            self.tick_min = freq / self.tick_rate;
-            self.tick_max = self.tick_min + 1;
-            self.tick_mod = self.tick_rate - (freq % self.tick_rate);
-        }
         let mut next = C::ticks();
         if self.tick_count >= self.tick_mod {
             next += self.tick_max;

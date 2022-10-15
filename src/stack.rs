@@ -16,11 +16,11 @@ impl<'a> Stack<'a> {
     }
 
     pub fn init(&mut self, exec: fn() -> !) {
-        unsafe {
-            riscv::register::mstatus::set_mpp(riscv::register::mstatus::MPP::Machine);
-            riscv::register::mstatus::set_mpie();
-            riscv::register::mstatus::set_mie();
-        }
+        // unsafe {
+        //     riscv::register::mstatus::set_mpp(riscv::register::mstatus::MPP::Machine);
+        //     riscv::register::mstatus::set_mpie();
+        //     riscv::register::mstatus::set_mie();
+        // }
         let mut mstatus: usize;
         unsafe {
             asm!(
