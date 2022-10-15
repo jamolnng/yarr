@@ -4,7 +4,7 @@
     mv x\reg, x0
 .endm
 
-#define WORD_SIZE 4
+.set WORD_SIZE 4
 
 .section .init
 _start:
