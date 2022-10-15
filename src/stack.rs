@@ -1,15 +1,16 @@
 use core::arch::asm;
 
 #[allow(dead_code)]
+#[repr(C)]
 pub struct Stack<'a> {
-    stack_ptr: usize,
+    stack_ptr: *mut usize,
     data: &'a mut [usize],
 }
 
 impl<'a> Stack<'a> {
     pub fn new(data: &'a mut [usize]) -> Self {
         Self {
-            stack_ptr: data.len(),
+            stack_ptr: unsafe { (&mut (data[data.len() - 1]) as *mut usize).add(1) },
             data,
         }
     }
@@ -27,12 +28,14 @@ impl<'a> Stack<'a> {
                 out(reg) mstatus,
             );
         }
-        self.data[self.stack_ptr - 1] = &exec as *const fn() -> ! as *const usize as usize;
-        self.data[self.stack_ptr - 2] = mstatus;
-        self.stack_ptr -= 30;
+        self.data[self.data.len() - 1] = exec as *const () as usize;
+        self.data[self.data.len() - 2] = mstatus;
+        unsafe {
+            self.stack_ptr = self.stack_ptr.sub(30);
+        }
     }
 
-    pub fn ptr(&self) -> usize {
-        &self.data[self.stack_ptr] as *const usize as usize
+    pub fn ptr(&self) -> *mut usize {
+        self.stack_ptr
     }
 }
