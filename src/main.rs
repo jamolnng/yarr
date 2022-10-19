@@ -1,26 +1,37 @@
 #![no_std]
 #![no_main]
 
-pub mod asm;
-pub mod clock;
-pub mod init;
-pub mod process;
-pub mod scheduler;
-pub mod stack;
-pub mod timer;
+#![allow(dead_code)]
+#![allow(unused_mut)]
+#![allow(unused_variables)]
 
-use scheduler::Scheduler;
+pub mod panic;
 
-const CLINT_REG_MTIMECMP: usize = 0x4000;
-const CLINT_CTRL_ADDR: usize = 0x02000000;
-const CLINT_REG_MTIME: usize = 0xBFF8;
+/*
+* Basic blinking LEDs example using mtime/mtimecmp registers
+* for "sleep" in a loop. Blinks each led once and goes to the next one.
+*/
+
+use hifive1::hal::delay::Sleep;
+use hifive1::hal::prelude::*;
+use hifive1::hal::DeviceResources;
+use hifive1::sprintln;
+use hifive1::{pin, pins, Led};
+use riscv_rt::entry;
+
+// switches led according to supplied status returning the new state back
+fn toggle_led(led: &mut dyn Led, status: bool) -> bool {
+    match status {
+        true => led.on(),
+        false => led.off(),
+    }
+
+    !status
+}
 
 const GPIO_CTRL_ADDR: usize = 0x10012000;
-const GPIO_REG_OUTPUT_VAL: usize = 0x0C;
-
+const GPIO_REG_OUTPUT_VAL: usize = 0x0C / 4;
 const GREEN_LED: usize = 0x00080000;
-// const BLUE_LED: usize = 0x00200000;
-const RED_LED: usize = 0x00400000;
 
 unsafe fn mmio_write(address: usize, offset: usize, value: usize) {
     let reg = address as *mut usize;
@@ -32,89 +43,61 @@ unsafe fn mmio_read(address: usize, offset: usize) -> usize {
     reg.add(offset).read_volatile()
 }
 
-struct HiFiveRTC;
-
-impl clock::Clock for HiFiveRTC {
-    fn freq() -> u64 {
-        32768
-    }
-
-    fn ticks() -> u64 {
-        unsafe {
-            let lo = mmio_read(CLINT_CTRL_ADDR, CLINT_REG_MTIME);
-            let hi = mmio_read(CLINT_CTRL_ADDR, CLINT_REG_MTIME + 4);
-            ((hi as u64) << 32) | lo as u64
-        }
-    }
-
-    fn set_cmp(next: u64) {
-        unsafe {
-            mmio_write(CLINT_CTRL_ADDR, CLINT_REG_MTIMECMP, (next) as usize);
-            mmio_write(
-                CLINT_CTRL_ADDR,
-                CLINT_REG_MTIMECMP + 4,
-                (next >> 32) as usize,
-            );
-        }
-    }
-}
-
-#[link_section = ".init.rust"]
-#[no_mangle]
-extern "C" fn _start_rust() -> ! {
-    start_rust()
-}
-
-fn start_rust() -> ! {
-    init::init_data();
-    init::zero_bss();
-    main()
-}
-
+#[entry]
 fn main() -> ! {
-    let mut idle_data = [0; 64];
-    let mut test_data = [0; 128];
-    let mut test_data2 = [0; 256];
+    let dr = DeviceResources::take().unwrap();
+    let p = dr.peripherals;
+    let pins = dr.pins;
 
-    let idle = process::RoundRobinProcess::idle(&mut idle_data);
-    let mut processes = [
-        process::RoundRobinProcess::new(
-            || loop {
-                unsafe {
-                    let mut gpio = mmio_read(GPIO_CTRL_ADDR, GPIO_REG_OUTPUT_VAL);
-                    gpio ^= RED_LED;
-                    mmio_write(GPIO_CTRL_ADDR, GPIO_REG_OUTPUT_VAL, gpio)
-                }
-                for _ in 0..250_000 {}
-            },
-            &mut test_data,
-        ),
-        process::RoundRobinProcess::new(
-            || loop {
-                unsafe {
-                    let mut gpio = mmio_read(GPIO_CTRL_ADDR, GPIO_REG_OUTPUT_VAL);
-                    gpio ^= GREEN_LED;
-                    mmio_write(GPIO_CTRL_ADDR, GPIO_REG_OUTPUT_VAL, gpio)
-                }
-                for _ in 0..1_000_000 {}
-            },
-            &mut test_data2,
-        ),
-    ];
+    // Configure clocks
+    let clocks = hifive1::clock::configure(p.PRCI, p.AONCLK, 320.mhz().into());
 
-    let mut sched = scheduler::RoundRobin::<HiFiveRTC>::new(1000, &mut processes, &idle);
-    sched.start();
-}
+    // Configure UART for stdout
+    hifive1::stdout::configure(
+        p.UART0,
+        pin!(pins, uart0_tx),
+        pin!(pins, uart0_rx),
+        115_200.bps(),
+        clocks,
+    );
 
-#[no_mangle]
-extern "C" fn eh_personality() {}
+    // get all 3 led pins in a tuple (each pin is it's own type here)
+    let rgb_pins = pins!(pins, (led_red, led_green, led_blue));
+    let mut tleds = hifive1::rgb(rgb_pins.0, rgb_pins.1, rgb_pins.2);
 
-#[panic_handler]
-fn panic(_info: &core::panic::PanicInfo) -> ! {
+    // get leds as the Led trait in an array so we can index them
+    let ileds: [&mut dyn Led; 3] = [&mut tleds.0, &mut tleds.1, &mut tleds.2];
+
+    // get the local interrupts struct
+    let clint = dr.core_peripherals.clint;
+
+    let mut led_status = [true, true, true]; // start on red
+    let mut current_led = 0; // start on red
+
+    // get the sleep struct
+    let mut sleep = Sleep::new(clint.mtimecmp, clocks);
+
+    sprintln!("Starting blink loop");
+
+    const PERIOD: u32 = 1000; // 1s
     loop {
-        // core::sync::atomic::compiler_fence(core::sync::atomic::Ordering::SeqCst);
+        let mut state = unsafe { mmio_read(GPIO_CTRL_ADDR, GPIO_REG_OUTPUT_VAL) };
+
+        state ^= GREEN_LED;
+
         unsafe {
-            core::arch::asm!("wfi");
+            mmio_write(GPIO_CTRL_ADDR, GPIO_REG_OUTPUT_VAL, state);
         }
+
+        // // toggle led
+        // led_status[current_led] = toggle_led(ileds[current_led], led_status[current_led]);
+
+        // // increment index if we blinked back to blank
+        // if led_status[current_led] {
+        //     current_led = (current_led + 1) % 3
+        // }
+
+        // sleep for 1
+        sleep.delay_ms(PERIOD);
     }
 }
