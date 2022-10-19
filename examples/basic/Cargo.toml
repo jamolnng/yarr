@@ -1,0 +1,10 @@
+[package]
+name = "basic"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+embedded-hal = "0.2.3"
+hifive1 = { version = "0.10.0", features = ["board-hifive1-revb"] }
+yarr = { path = "../../yarr" }

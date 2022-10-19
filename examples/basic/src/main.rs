@@ -17,7 +17,7 @@ use hifive1::hal::prelude::*;
 use hifive1::hal::DeviceResources;
 use hifive1::sprintln;
 use hifive1::{pin, pins, Led};
-use riscv_rt::entry;
+use yarr::entry;
 
 // switches led according to supplied status returning the new state back
 fn toggle_led(led: &mut dyn Led, status: bool) -> bool {
