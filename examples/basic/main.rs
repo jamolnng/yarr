@@ -5,7 +5,7 @@
 #![allow(unused_mut)]
 #![allow(unused_variables)]
 
-pub mod panic;
+extern crate yarr;
 
 /*
 * Basic blinking LEDs example using mtime/mtimecmp registers
@@ -99,5 +99,13 @@ fn main() -> ! {
 
         // sleep for 1
         sleep.delay_ms(PERIOD);
+    }
+}
+
+#[inline(never)]
+#[panic_handler]
+fn panic(_info: &core::panic::PanicInfo) -> ! {
+    loop {
+        core::sync::atomic::compiler_fence(core::sync::atomic::Ordering::SeqCst);
     }
 }
