@@ -1,11 +1,32 @@
 #![no_std]
 #![no_main]
-
 #![allow(dead_code)]
 #![allow(unused_mut)]
 #![allow(unused_variables)]
 
 extern crate yarr;
+extern crate yarr_riscv;
+
+processes!(
+    yarr::process::Process {
+        stack: &[0 as usize; 128],
+        exec: || { loop {} },
+        priority: 100,
+        ready: true,
+    },
+    yarr::process::Process {
+        stack: &[0 as usize; 128],
+        exec: || { loop {} },
+        priority: 50,
+        ready: true,
+    },
+    yarr::process::Process {
+        stack: &[0 as usize; 128],
+        exec: || { loop {} },
+        priority: 10,
+        ready: true,
+    }
+);
 
 /*
 * Basic blinking LEDs example using mtime/mtimecmp registers
@@ -17,6 +38,8 @@ use hifive1::hal::prelude::*;
 use hifive1::hal::DeviceResources;
 use hifive1::sprintln;
 use hifive1::{pin, pins, Led};
+use yarr::processes;
+use yarr::scheduler::Scheduler;
 use yarr_riscv::entry;
 
 // switches led according to supplied status returning the new state back
@@ -79,11 +102,15 @@ fn main() -> ! {
 
     sprintln!("Starting blink loop");
 
+    let sched = Scheduler {};
+
     const PERIOD: u32 = 1000; // 1s
     loop {
         let mut state = unsafe { mmio_read(GPIO_CTRL_ADDR, GPIO_REG_OUTPUT_VAL) };
 
-        state ^= GREEN_LED;
+        if sched.test() {
+            state ^= GREEN_LED;
+        }
 
         unsafe {
             mmio_write(GPIO_CTRL_ADDR, GPIO_REG_OUTPUT_VAL, state);
