@@ -12,8 +12,11 @@ keywords = ["riscv", "rtos"]
 categories = ["embedded", "no-std"]
 
 [dependencies]
-riscv = "0.9.0"
-riscv-rt = "0.9.0"
+
+# [[bin]]
+# name = "yarr"
+# test = false
+# bench = false
 
 [profile.release]
 codegen-units = 1

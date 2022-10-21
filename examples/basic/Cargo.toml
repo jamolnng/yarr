@@ -7,4 +7,7 @@ publish = false
 [dependencies]
 embedded-hal = "0.2.3"
 hifive1 = { version = "0.10.0", features = ["board-hifive1-revb"] }
+riscv = "0.9.0"
+riscv-rt = "0.9.0"
 yarr = { path = "../../yarr" }
+yarr-riscv = { path = "../../yarr-riscv" }
