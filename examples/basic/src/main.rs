@@ -1,60 +1,21 @@
 #![no_std]
 #![no_main]
-#![allow(dead_code)]
-#![allow(unused_mut)]
-#![allow(unused_variables)]
 
 extern crate yarr;
 extern crate yarr_riscv;
 
-processes!(
-    yarr::process::Process {
-        stack: &[0 as usize; 128],
-        exec: || { loop {} },
-        priority: 100,
-        ready: true,
-    },
-    yarr::process::Process {
-        stack: &[0 as usize; 128],
-        exec: || { loop {} },
-        priority: 50,
-        ready: true,
-    },
-    yarr::process::Process {
-        stack: &[0 as usize; 128],
-        exec: || { loop {} },
-        priority: 10,
-        ready: true,
-    }
-);
-
-/*
-* Basic blinking LEDs example using mtime/mtimecmp registers
-* for "sleep" in a loop. Blinks each led once and goes to the next one.
-*/
-
-use hifive1::hal::delay::Sleep;
 use hifive1::hal::prelude::*;
 use hifive1::hal::DeviceResources;
-use hifive1::sprintln;
-use hifive1::{pin, pins, Led};
+use hifive1::pin;
+
 use yarr::processes;
-use yarr::scheduler::Scheduler;
 use yarr_riscv::entry;
-
-// switches led according to supplied status returning the new state back
-fn toggle_led(led: &mut dyn Led, status: bool) -> bool {
-    match status {
-        true => led.on(),
-        false => led.off(),
-    }
-
-    !status
-}
 
 const GPIO_CTRL_ADDR: usize = 0x10012000;
 const GPIO_REG_OUTPUT_VAL: usize = 0x0C / 4;
+const RED_LED: usize = 0x00400000;
 const GREEN_LED: usize = 0x00080000;
+const BLUE_LED: usize = 0x00200000;
 
 unsafe fn mmio_write(address: usize, offset: usize, value: usize) {
     let reg = address as *mut usize;
@@ -84,55 +45,65 @@ fn main() -> ! {
         clocks,
     );
 
-    // get all 3 led pins in a tuple (each pin is it's own type here)
-    let rgb_pins = pins!(pins, (led_red, led_green, led_blue));
-    let mut tleds = hifive1::rgb(rgb_pins.0, rgb_pins.1, rgb_pins.2);
-
-    // get leds as the Led trait in an array so we can index them
-    let ileds: [&mut dyn Led; 3] = [&mut tleds.0, &mut tleds.1, &mut tleds.2];
-
-    // get the local interrupts struct
-    let clint = dr.core_peripherals.clint;
-
-    let mut led_status = [true, true, true]; // start on red
-    let mut current_led = 0; // start on red
-
-    // get the sleep struct
-    let mut sleep = Sleep::new(clint.mtimecmp, clocks);
-
-    sprintln!("Starting blink loop");
-
-    let sched = Scheduler {};
-
-    const PERIOD: u32 = 1000; // 1s
-    loop {
-        let mut state = unsafe { mmio_read(GPIO_CTRL_ADDR, GPIO_REG_OUTPUT_VAL) };
-
-        if sched.test() {
-            state ^= GREEN_LED;
-        }
-
-        unsafe {
-            mmio_write(GPIO_CTRL_ADDR, GPIO_REG_OUTPUT_VAL, state);
-        }
-
-        // // toggle led
-        // led_status[current_led] = toggle_led(ileds[current_led], led_status[current_led]);
-
-        // // increment index if we blinked back to blank
-        // if led_status[current_led] {
-        //     current_led = (current_led + 1) % 3
-        // }
-
-        // sleep for 1
-        sleep.delay_ms(PERIOD);
-    }
+    use yarr::scheduler::Scheduler;
+    yarr_riscv::scheduler::Scheduler::start()
 }
+
+processes!(
+    yarr::process::Process {
+        stack: &[0 as usize; 128],
+        exec: || {
+            loop {
+                unsafe {
+                    let mut state = mmio_read(GPIO_CTRL_ADDR, GPIO_REG_OUTPUT_VAL);
+                    state ^= RED_LED;
+                    mmio_write(GPIO_CTRL_ADDR, GPIO_REG_OUTPUT_VAL, state);
+                }
+                for _ in 0..8000000 {}
+            }
+        },
+        priority: 100,
+        ready: true,
+    },
+    yarr::process::Process {
+        stack: &[0 as usize; 128],
+        exec: || {
+            loop {
+                unsafe {
+                    let mut state = mmio_read(GPIO_CTRL_ADDR, GPIO_REG_OUTPUT_VAL);
+                    state ^= GREEN_LED;
+                    mmio_write(GPIO_CTRL_ADDR, GPIO_REG_OUTPUT_VAL, state);
+                }
+                for _ in 0..4000000 {}
+            }
+        },
+        priority: 50,
+        ready: true,
+    },
+    yarr::process::Process {
+        stack: &[0 as usize; 128],
+        exec: || {
+            loop {
+                unsafe {
+                    let mut state = mmio_read(GPIO_CTRL_ADDR, GPIO_REG_OUTPUT_VAL);
+                    state ^= BLUE_LED;
+                    mmio_write(GPIO_CTRL_ADDR, GPIO_REG_OUTPUT_VAL, state);
+                }
+                for _ in 0..2000000 {}
+            }
+        },
+        priority: 10,
+        ready: true,
+    }
+);
 
 #[inline(never)]
 #[panic_handler]
 fn panic(_info: &core::panic::PanicInfo) -> ! {
     loop {
         core::sync::atomic::compiler_fence(core::sync::atomic::Ordering::SeqCst);
+        unsafe {
+            riscv::asm::wfi();
+        }
     }
 }
