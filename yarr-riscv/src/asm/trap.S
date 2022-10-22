@@ -37,6 +37,8 @@ context frame:
 */
 .set CONTEXT_SIZE, (33 * REGBYTES)
 
+.global _sstack
+
 .section .text
 .global yarr_trap_vec
 .align 4
@@ -75,7 +77,7 @@ yarr_synchronous_exception:
     call yarr_sys_exception_handler
 
 yarr_restore_context:
-    # TODO: get stack pointer (maybe from return value?)
+    # TODO: get stack pointer (maybe from return value 0?)
 
     # load registers
     .set i, 0

@@ -15,6 +15,7 @@ use yarr::scheduler::Scheduler;
 
 const GPIO_CTRL_ADDR: usize = 0x10012000;
 const GPIO_REG_OUTPUT_VAL: usize = 0x0C / 4;
+const GPIO_REG_OUTPUT_EN: usize = 0x08 / 4;
 const RED_LED: usize = 0x00400000;
 const GREEN_LED: usize = 0x00080000;
 const BLUE_LED: usize = 0x00200000;
@@ -46,6 +47,16 @@ fn main() -> ! {
         115_200.bps(),
         clocks,
     );
+
+    unsafe {
+        let mut state = mmio_read(GPIO_CTRL_ADDR, GPIO_REG_OUTPUT_VAL);
+        state |= RED_LED | GREEN_LED | BLUE_LED;
+        mmio_write(GPIO_CTRL_ADDR, GPIO_REG_OUTPUT_VAL, state);
+
+        let mut state = mmio_read(GPIO_CTRL_ADDR, GPIO_REG_OUTPUT_EN);
+        state |= RED_LED | GREEN_LED | BLUE_LED;
+        mmio_write(GPIO_CTRL_ADDR, GPIO_REG_OUTPUT_EN, state);
+    }
 
     yarr::scheduler::start(Scheduler::RoundRobin)
 }

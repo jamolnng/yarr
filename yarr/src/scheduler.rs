@@ -8,7 +8,7 @@ static mut SCHEDULER_TYPE: Scheduler = Scheduler::RoundRobin;
 static mut ROUND_ROBIN_ITER: usize = 0;
 
 extern "C" {
-    pub fn start_first_task() -> !;
+    pub fn yarr_start_first_task(sp: usize) -> !;
 }
 
 extern "Rust" {
@@ -22,7 +22,8 @@ pub fn start(sched: Scheduler) -> ! {
         for i in 0..PROCESS_LIST.len() {
             yarr_init_process(&mut PROCESS_LIST[i]);
         }
-        crate::scheduler::start_first_task()
+        let fisrt_task = schedule();
+        crate::scheduler::yarr_start_first_task(fisrt_task.stack[fisrt_task.stack.len() - 32])
     }
 }
 
