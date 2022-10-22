@@ -5,7 +5,7 @@ extern "C" {
 }
 
 extern "Rust" {
-    pub fn yarr_init_process(stack: &mut Process);
+    pub fn yarr_init_process(process: &mut Process);
 }
 
 pub fn start() -> ! {
