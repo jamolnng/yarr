@@ -8,14 +8,13 @@ yarr_start_first_task:
 
     # get stack pointer from function argument 0
     mv sp, a0
-
-.global yarr_load_return_addr
-yarr_load_return_addr:
+    
     load_reg ra 32
 
-    # load registers x1-x31 to 0(sp)-30(sp)
-    .set i, 1
-    .rept 30
+    # load registers x3-x31 from (2 * REGBYTES)(sp)-(30 * REGBYTES)(sp)
+    # skip x1 (ra) and x2 (sp) since we pre-loaded them
+    .set i, 2
+    .rept 29
         .set i, i + 1
         load_xreg %i
     .endr
