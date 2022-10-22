@@ -3,6 +3,7 @@
 pub mod process;
 pub mod scheduler;
 pub mod timer;
+pub mod isr;
 
 #[macro_export]
 macro_rules! processes {

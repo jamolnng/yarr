@@ -2,8 +2,3 @@
 start_first_task:
     wfi
     ret
-
-# .global init_process
-# init_process:
-#     wfi
-#     ret
