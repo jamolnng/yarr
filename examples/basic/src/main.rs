@@ -11,6 +11,7 @@ use hifive1::pin;
 use yarr::processes;
 use yarr::process::Process;
 use yarr_riscv::entry;
+use yarr::scheduler::Scheduler;
 
 const GPIO_CTRL_ADDR: usize = 0x10012000;
 const GPIO_REG_OUTPUT_VAL: usize = 0x0C / 4;
@@ -46,7 +47,7 @@ fn main() -> ! {
         clocks,
     );
 
-    yarr::scheduler::start()
+    yarr::scheduler::start(Scheduler::RoundRobin)
 }
 
 processes!(
