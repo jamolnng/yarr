@@ -8,14 +8,14 @@ pub mod timer;
 macro_rules! processes {
     ($($a:expr),+) => {
         extern "Rust" {
-            fn IDLE_TASK() -> !;
+            fn yarr_idle_task() -> !;
         }
         #[no_mangle]
         pub static mut PROCESS_LIST: &'static [yarr::process::Process] = &[
             $($a,)+
             yarr::process::Process {
-                stack: &[0 as usize; 128],
-                exec: || { unsafe{ IDLE_TASK() } },
+                stack: &mut [0 as usize; 128],
+                exec: || { unsafe{ yarr_idle_task() } },
                 priority: 0,
                 ready: true,
             }

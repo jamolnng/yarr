@@ -9,6 +9,7 @@ use hifive1::hal::DeviceResources;
 use hifive1::pin;
 
 use yarr::processes;
+use yarr::process::Process;
 use yarr_riscv::entry;
 
 const GPIO_CTRL_ADDR: usize = 0x10012000;
@@ -45,13 +46,12 @@ fn main() -> ! {
         clocks,
     );
 
-    use yarr::scheduler::Scheduler;
-    yarr_riscv::scheduler::Scheduler::start()
+    yarr::scheduler::start()
 }
 
 processes!(
-    yarr::process::Process {
-        stack: &[0 as usize; 128],
+    Process {
+        stack: &mut [0 as usize; 128],
         exec: || {
             loop {
                 unsafe {
@@ -63,10 +63,10 @@ processes!(
             }
         },
         priority: 100,
-        ready: true,
+        ready: true
     },
-    yarr::process::Process {
-        stack: &[0 as usize; 128],
+    Process {
+        stack: &mut [0 as usize; 128],
         exec: || {
             loop {
                 unsafe {
@@ -78,10 +78,10 @@ processes!(
             }
         },
         priority: 50,
-        ready: true,
+        ready: true
     },
-    yarr::process::Process {
-        stack: &[0 as usize; 128],
+    Process {
+        stack: &mut [0 as usize; 128],
         exec: || {
             loop {
                 unsafe {
@@ -93,7 +93,7 @@ processes!(
             }
         },
         priority: 10,
-        ready: true,
+        ready: true
     }
 );
 
