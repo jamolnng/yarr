@@ -8,7 +8,7 @@ pub mod timer;
 macro_rules! processes {
     ($($a:expr),+) => {
         #[no_mangle]
-        pub static mut PROCESS_LIST: &'static [yarr::process::Process] = &[
+        pub static mut PROCESS_LIST: &'static mut [yarr::process::Process] = &mut [
             $($a,)+
             yarr::process::Process {
                 stack: &mut [0 as usize; 128],
