@@ -43,58 +43,115 @@ context frame:
 .global yarr_trap_vec
 .align 4
 yarr_trap_vec:
-    addi sp, sp, -CONTEXT_SIZE
-    
-    # store registers x1-x31
-    .set i, 0
-    .rept 31
-        .set i, i + 1
-        save_xreg %i
-    .endr
+    # swap t6 into mscratch and put context frame into t6
+    csrrw t6, mscratch, t6
+
+    # save registers to context frame
+    store  x1, ( 0 * REGBYTES)(t6)
+    store  x2, ( 1 * REGBYTES)(t6)
+    store  x3, ( 2 * REGBYTES)(t6)
+    store  x4, ( 3 * REGBYTES)(t6)
+    store  x5, ( 4 * REGBYTES)(t6)
+    store  x6, ( 5 * REGBYTES)(t6)
+    store  x7, ( 6 * REGBYTES)(t6)
+    store  x8, ( 7 * REGBYTES)(t6)
+    store  x9, ( 8 * REGBYTES)(t6)
+    store x10, ( 9 * REGBYTES)(t6)
+    store x11, (10 * REGBYTES)(t6)
+    store x12, (11 * REGBYTES)(t6)
+    store x13, (12 * REGBYTES)(t6)
+    store x14, (13 * REGBYTES)(t6)
+    store x15, (14 * REGBYTES)(t6)
+    store x16, (15 * REGBYTES)(t6)
+    store x17, (16 * REGBYTES)(t6)
+    store x18, (17 * REGBYTES)(t6)
+    store x19, (18 * REGBYTES)(t6)
+    store x20, (19 * REGBYTES)(t6)
+    store x21, (20 * REGBYTES)(t6)
+    store x22, (21 * REGBYTES)(t6)
+    store x23, (22 * REGBYTES)(t6)
+    store x24, (23 * REGBYTES)(t6)
+    store x25, (24 * REGBYTES)(t6)
+    store x26, (25 * REGBYTES)(t6)
+    store x27, (26 * REGBYTES)(t6)
+    store x28, (27 * REGBYTES)(t6)
+    store x29, (28 * REGBYTES)(t6)
+    store x30, (29 * REGBYTES)(t6)
+    # skip x31/t6
 
     # TODO: conditionally save floating point registers on system with them
 
-    csrr a0, mstatus
-    save_reg a0 31
+    # now grab t6 and save it to the context
+    csrr t5, mscratch
+    store t5, (30 * REGBYTES)(t6)
+
+    # save mstatus to context
+    csrr t5, mstatus
+    store t5 (31 * REGBYTES)(t6)
+
+    # save mepc to context
+    csrr t5, mepc
+    store t5 (32 * REGBYTES)(t6)
+
+    # restore context back to mscratch
+    csrw mscratch, t6
 
     csrr a0, mcause
-    csrr a1, mepc
+    csrr a1, mtval
+    csrr a2, mhartid
+    csrr a3, mstatus
+    csrr a4, mscratch
 
-    # test for synchronous interrupt
-    srli a2, a0, __riscv_xlen - 1
-    bnez a2, yarr_synchronous_exception
+    call yarr_m_trap
 
-yarr_asynchronous_exception:
-    save_reg a1 32 # save mepc program counter
-    load sp _sstack
-    call yarr_sys_interrupt_handler
-    j yarr_restore_context
+    # restore context
+    # a0 is new context
 
-yarr_synchronous_exception:
-    addi a1, a1, REGBYTES # make program counter go to next step
-    save_reg a1 32 # save mepc program counter
-    load sp _sstack
-    call yarr_sys_exception_handler
+    # load return address to jump to when mret is called
+    load t0, (32 * REGBYTES)(a0)
+    csrw mepc, t0
 
-yarr_restore_context:
-    # TODO: get stack pointer (maybe from return value 0?)
+    # load mstatus
+    load t0, (31 * REGBYTES)(a0)
+    csrw mstatus, t0
 
-    # load registers
-    .set i, 0
-    .rept 31
-        .set i, i + 1
-        load_xreg %i
-    .endr
+    load  x1, ( 0 * REGBYTES)(a0)
+    load  x2, ( 1 * REGBYTES)(a0)
+    load  x3, ( 2 * REGBYTES)(a0)
+    load  x4, ( 3 * REGBYTES)(a0)
+    load  x5, ( 4 * REGBYTES)(a0)
+    load  x6, ( 5 * REGBYTES)(a0)
+    load  x7, ( 6 * REGBYTES)(a0)
+    load  x8, ( 7 * REGBYTES)(a0)
+    load  x9, ( 8 * REGBYTES)(a0)
+    # skip x10/a0
+    load x11, (10 * REGBYTES)(a0)
+    load x12, (11 * REGBYTES)(a0)
+    load x13, (12 * REGBYTES)(a0)
+    load x14, (13 * REGBYTES)(a0)
+    load x15, (14 * REGBYTES)(a0)
+    load x16, (15 * REGBYTES)(a0)
+    load x17, (16 * REGBYTES)(a0)
+    load x18, (17 * REGBYTES)(a0)
+    load x19, (18 * REGBYTES)(a0)
+    load x20, (19 * REGBYTES)(a0)
+    load x21, (20 * REGBYTES)(a0)
+    load x22, (21 * REGBYTES)(a0)
+    load x23, (22 * REGBYTES)(a0)
+    load x24, (23 * REGBYTES)(a0)
+    load x25, (24 * REGBYTES)(a0)
+    load x26, (25 * REGBYTES)(a0)
+    load x27, (26 * REGBYTES)(a0)
+    load x28, (27 * REGBYTES)(a0)
+    load x29, (28 * REGBYTES)(a0)
+    load x30, (29 * REGBYTES)(a0)
+    load x31, (30 * REGBYTES)(a0)
+
+    # save heart local context pointer before we swap
+    csrw mscratch, a0
+
+    load a0, (9 * REGBYTES)(a0)
 
     # TODO: conditionally load floating point registers on system with them
 
-    # load mstatus
-    load_reg t0, 31
-    csrw mstatus, t0
-
-    # load mepc return address
-    load_reg t0 32
-    csrw mepc, t0
-
-    addi sp, sp, CONTEXT_SIZE
     mret

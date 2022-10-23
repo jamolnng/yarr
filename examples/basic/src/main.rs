@@ -8,10 +8,8 @@ use hifive1::hal::prelude::*;
 use hifive1::hal::DeviceResources;
 use hifive1::pin;
 
-use yarr::processes;
-use yarr::process::Process;
-use yarr_riscv::entry;
-use yarr::scheduler::Scheduler;
+use yarr::{process::Process, processes, scheduler::Scheduler};
+use yarr_riscv::{context, entry};
 
 const GPIO_CTRL_ADDR: usize = 0x10012000;
 const GPIO_REG_OUTPUT_VAL: usize = 0x0C / 4;
@@ -63,6 +61,7 @@ fn main() -> ! {
 
 processes!(
     Process {
+        context: context!(),
         stack: &mut [0 as usize; 128],
         exec: || {
             loop {
@@ -78,6 +77,7 @@ processes!(
         ready: true
     },
     Process {
+        context: context!(),
         stack: &mut [0 as usize; 128],
         exec: || {
             loop {
@@ -93,6 +93,7 @@ processes!(
         ready: true
     },
     Process {
+        context: context!(),
         stack: &mut [0 as usize; 128],
         exec: || {
             loop {

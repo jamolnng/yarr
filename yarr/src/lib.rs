@@ -3,7 +3,6 @@
 pub mod process;
 pub mod scheduler;
 pub mod timer;
-pub mod isr;
 
 #[macro_export]
 macro_rules! processes {
@@ -12,6 +11,7 @@ macro_rules! processes {
         pub static mut PROCESS_LIST: &'static mut [yarr::process::Process] = &mut [
             $($a,)+
             yarr::process::Process {
+                context: context!(),
                 stack: &mut [0 as usize; 128],
                 exec: || {
                     extern "Rust" {

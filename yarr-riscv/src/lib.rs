@@ -39,6 +39,7 @@ TODO: conditionally save floating point registers on system with them
 */
 
 pub mod asm;
+pub mod trap;
 
 pub use riscv_rt::entry;
 use yarr::process::Process;
@@ -65,10 +66,36 @@ fn yarr_init_process(process: &mut Process) {
     }
     // (0x188 << 4) | 8 = 0x1888 = 6280 = 0b0001100010001000 // enable MPP, MPIE, and MIE bits
     mstatus |= 0x1888;
+
     // store mepc/pc program counter for when initial ret is called
-    process.stack[process.stack.len() - 1] = process.exec as *const () as usize;
-    process.stack[process.stack.len() - 2] = mstatus;
+    process.context[process.context.len() - 1] = process.exec as *const () as usize;
+    process.context[process.context.len() - 2] = mstatus;
     // store stack pointer
-    process.stack[process.stack.len() - 32] =
-        unsafe { process.stack.as_ptr().add(process.stack.len() - 33) } as usize;
+    process.context[1] = process.stack.as_ptr() as usize;
+
+    // // store mepc/pc program counter for when initial ret is called
+    // process.stack[process.stack.len() - 1] = process.exec as *const () as usize;
+    // process.stack[process.stack.len() - 2] = mstatus;
+    // // store stack pointer
+    // process.stack[process.stack.len() - 32] =
+    //     unsafe { process.stack.as_ptr().add(process.stack.len() - 33) } as usize;
+}
+
+// context len: 33
+// fp registers len: 32
+#[cfg(any(target_feature="f", target_feature="d"))]
+#[macro_export]
+macro_rules! context {
+    () => {
+        &mut [0 as usize; 33 + 32]
+    };
+}
+
+// context len: 33
+#[cfg(not(any(target_feature="f", target_feature="d")))]
+#[macro_export]
+macro_rules! context {
+    () => {
+        &mut [0 as usize; 33]
+    };
 }
