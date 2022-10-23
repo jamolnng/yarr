@@ -35,7 +35,8 @@ fn main() -> ! {
     let pins = dr.pins;
 
     // Configure clocks
-    let clocks = hifive1::clock::configure(p.PRCI, p.AONCLK, 320.mhz().into());
+    let clock_freq = 320.mhz().into();
+    let clocks = hifive1::clock::configure(p.PRCI, p.AONCLK, clock_freq);
 
     // Configure UART for stdout
     hifive1::stdout::configure(
@@ -56,13 +57,14 @@ fn main() -> ! {
         mmio_write(GPIO_CTRL_ADDR, GPIO_REG_OUTPUT_EN, state);
     }
 
-    yarr::scheduler::start(Scheduler::RoundRobin)
+    let context_switch_time = 32768; // context switch 1000 times per second
+    yarr::scheduler::start(Scheduler::RoundRobin, context_switch_time)
 }
 
 processes!(
     Process {
         context: context!(),
-        stack: &mut [0 as usize; 128],
+        stack: &mut [0 as usize; 512],
         exec: || {
             loop {
                 unsafe {
@@ -70,7 +72,7 @@ processes!(
                     state ^= RED_LED;
                     mmio_write(GPIO_CTRL_ADDR, GPIO_REG_OUTPUT_VAL, state);
                 }
-                for _ in 0..8000000 {}
+                for _ in 0..800000 {}
             }
         },
         priority: 100,
@@ -78,7 +80,7 @@ processes!(
     },
     Process {
         context: context!(),
-        stack: &mut [0 as usize; 128],
+        stack: &mut [0 as usize; 512],
         exec: || {
             loop {
                 unsafe {
@@ -86,7 +88,7 @@ processes!(
                     state ^= GREEN_LED;
                     mmio_write(GPIO_CTRL_ADDR, GPIO_REG_OUTPUT_VAL, state);
                 }
-                for _ in 0..4000000 {}
+                for _ in 0..400000 {}
             }
         },
         priority: 50,
@@ -94,7 +96,7 @@ processes!(
     },
     Process {
         context: context!(),
-        stack: &mut [0 as usize; 128],
+        stack: &mut [0 as usize; 512],
         exec: || {
             loop {
                 unsafe {
@@ -102,7 +104,7 @@ processes!(
                     state ^= BLUE_LED;
                     mmio_write(GPIO_CTRL_ADDR, GPIO_REG_OUTPUT_VAL, state);
                 }
-                for _ in 0..2000000 {}
+                for _ in 0..200000 {}
             }
         },
         priority: 10,

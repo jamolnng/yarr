@@ -87,11 +87,11 @@ yarr_trap_vec:
 
     # save mstatus to context
     csrr t5, mstatus
-    store t5 (31 * REGBYTES)(t6)
+    store t5, (31 * REGBYTES)(t6)
 
     # save mepc to context
     csrr t5, mepc
-    store t5 (32 * REGBYTES)(t6)
+    store t5, (32 * REGBYTES)(t6)
 
     # restore context back to mscratch
     csrw mscratch, t6
@@ -104,8 +104,12 @@ yarr_trap_vec:
 
     call yarr_m_trap
 
+yarr_restore_context:
     # restore context
     # a0 is new context
+
+    # ! this is for testing, looking for a bug with context switching
+    csrr a0, mscratch
 
     # load return address to jump to when mret is called
     load t0, (32 * REGBYTES)(a0)

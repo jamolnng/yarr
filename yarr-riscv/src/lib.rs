@@ -40,6 +40,7 @@ TODO: conditionally save floating point registers on system with them
 
 pub mod asm;
 pub mod trap;
+pub mod timer;
 
 pub use riscv_rt::entry;
 use yarr::process::Process;

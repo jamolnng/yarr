@@ -39,7 +39,13 @@ context frame:
 
 .global yarr_start_first_task
 yarr_start_first_task:
+    li t0, 0x80
+    csrs mie, t0
+    csrsi mstatus, 8
+
     # a0 = context frame
+    # save heart local context pointer
+    csrw mscratch, a0
 
     # set machine trap vector to ours
     la t0, yarr_trap_vec
@@ -83,9 +89,6 @@ yarr_start_first_task:
     load x29, (28 * REGBYTES)(a0)
     load x30, (29 * REGBYTES)(a0)
     load x31, (30 * REGBYTES)(a0)
-
-    # save heart local context pointer before we swap
-    csrw mscratch, a0
 
     load a0, (9 * REGBYTES)(a0)
     

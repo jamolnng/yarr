@@ -14,7 +14,7 @@ pub unsafe extern "C" fn yarr_m_trap(
         const IRQ_M_TIMER: usize = 7;
         if mcause == IRQ_M_TIMER {
             // TODO: tick
-            // TODO: set timer
+            yarr::timer::yarr_set_timer(yarr::scheduler::CONTEXT_SWITCH_TIME);
             new_frame = yarr::scheduler::schedule().context.as_ptr() as usize;
         } else {
             panic!(); // TODO: unhandled trap
@@ -22,6 +22,7 @@ pub unsafe extern "C" fn yarr_m_trap(
     } else {
         const ERQ_M_ECALL: usize = 11;
         if mcause == ERQ_M_ECALL {
+            yarr::timer::yarr_set_timer(yarr::scheduler::CONTEXT_SWITCH_TIME);
             new_frame = yarr::scheduler::schedule().context.as_ptr() as usize;
         } else {
             panic!(); // TODO: unhandled trap
