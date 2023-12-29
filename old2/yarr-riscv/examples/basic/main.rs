@@ -8,6 +8,7 @@ use hifive1::hal::prelude::*;
 use hifive1::hal::DeviceResources;
 use hifive1::pin;
 
+use hifive1::sprintln;
 use yarr::{process::Process, processes, scheduler::Scheduler};
 use yarr_riscv::{context, entry};
 
@@ -47,6 +48,8 @@ fn main() -> ! {
         clocks,
     );
 
+    sprintln!("hello, rust");
+
     unsafe {
         let mut state = mmio_read(GPIO_CTRL_ADDR, GPIO_REG_OUTPUT_VAL);
         state |= RED_LED | GREEN_LED | BLUE_LED;
@@ -64,15 +67,16 @@ fn main() -> ! {
 processes!(
     Process {
         context: context!(),
-        stack: &mut [0 as usize; 512],
+        stack: &mut [0 as usize; 128],
         exec: || {
             loop {
                 unsafe {
                     let mut state = mmio_read(GPIO_CTRL_ADDR, GPIO_REG_OUTPUT_VAL);
                     state ^= RED_LED;
+                    state ^= GREEN_LED;
                     mmio_write(GPIO_CTRL_ADDR, GPIO_REG_OUTPUT_VAL, state);
                 }
-                for _ in 0..800000 {}
+                for _ in 0..200000 {}
             }
         },
         priority: 100,
@@ -80,7 +84,7 @@ processes!(
     },
     Process {
         context: context!(),
-        stack: &mut [0 as usize; 512],
+        stack: &mut [0 as usize; 128],
         exec: || {
             loop {
                 unsafe {
@@ -96,7 +100,7 @@ processes!(
     },
     Process {
         context: context!(),
-        stack: &mut [0 as usize; 512],
+        stack: &mut [0 as usize; 128],
         exec: || {
             loop {
                 unsafe {
@@ -114,11 +118,12 @@ processes!(
 
 #[inline(never)]
 #[panic_handler]
-fn panic(_info: &core::panic::PanicInfo) -> ! {
+fn panic(info: &core::panic::PanicInfo) -> ! {
+    sprintln!("info: {info}", info = info);
     loop {
         core::sync::atomic::compiler_fence(core::sync::atomic::Ordering::SeqCst);
-        unsafe {
-            riscv::asm::wfi();
-        }
+        // unsafe {
+        //     riscv::asm::wfi();
+        // }
     }
 }

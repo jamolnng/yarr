@@ -38,10 +38,10 @@ context frame:
 .global yarr_trap_vec
 
 .global yarr_start_first_task
+.align 4
 yarr_start_first_task:
-    li t0, 0x80
-    csrs mie, t0
-    csrsi mstatus, 8
+    csrsi mie, 0
+    csrsi mstatus, 0
 
     # a0 = context frame
     # save heart local context pointer
@@ -93,5 +93,9 @@ yarr_start_first_task:
     load a0, (9 * REGBYTES)(a0)
     
     # TODO: conditionally load floating point registers on system with them
+
+    li t0, 0x80
+    csrs mie, t0
+    csrsi mstatus, 8
 
     ret

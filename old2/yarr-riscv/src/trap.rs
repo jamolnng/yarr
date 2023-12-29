@@ -1,10 +1,10 @@
 #[no_mangle]
 pub unsafe extern "C" fn yarr_m_trap(
     mcause: usize,
-    _mtval: usize,
-    _mhartid: usize,
-    _mstatus: usize,
-    _mscratch: usize,
+    mtval: usize,
+    mhartid: usize,
+    mstatus: usize,
+    mscratch: usize,
 ) -> usize {
     let new_frame;
     let is_async = (mcause >> ((core::mem::size_of::<usize>() * 8) - 1)) & 1 == 1;
@@ -17,7 +17,7 @@ pub unsafe extern "C" fn yarr_m_trap(
             yarr::timer::yarr_set_timer(yarr::scheduler::CONTEXT_SWITCH_TIME);
             new_frame = yarr::scheduler::schedule().context.as_ptr() as usize;
         } else {
-            panic!(); // TODO: unhandled trap
+            panic!("unhandled async trap: {mcause}  {mtval}  {mhartid}  {mstatus}  {mscratch} "); // TODO: unhandled trap
         }
     } else {
         const ERQ_M_ECALL: usize = 11;
@@ -25,7 +25,7 @@ pub unsafe extern "C" fn yarr_m_trap(
             yarr::timer::yarr_set_timer(yarr::scheduler::CONTEXT_SWITCH_TIME);
             new_frame = yarr::scheduler::schedule().context.as_ptr() as usize;
         } else {
-            panic!(); // TODO: unhandled trap
+            panic!("unhandled sync trap: {mcause}  {mtval}  {mhartid}  {mstatus}  {mscratch} "); // TODO: unhandled trap
         }
     }
     new_frame

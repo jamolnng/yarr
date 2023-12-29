@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "yarr",
+    "yarr-riscv",
+]
+resolver = "2"
