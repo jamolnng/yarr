@@ -64,7 +64,7 @@ fn main() -> ! {
         clocks,
     );
 
-    sprintln!("Hello, World! {}MHz", clocks.measure_coreclk().0 / 1000000);
+    sprintln!("Hello, World! {}MHz", clocks.measure_coreclk().0 / 1_000_000);
 
     unsafe {
         let mut state = mmio_read(GPIO_CTRL_ADDR, GPIO_REG_OUTPUT_VAL);
@@ -100,7 +100,7 @@ fn main() -> ! {
         });
     }
     // enable U-mode in the entire memory map, for fun
-    pmp::init(0, 0x8000_4000, riscv::register::Range::TOR, riscv::register::Permission::RWX, false);
+    pmp::init(0, 0x8000_4000, riscv::register::Range::TOR, riscv::register::Permission::RW, false);
     schedule::yarr_set_timer(32);
     trap::switch_task(schedule::schedule())
 }

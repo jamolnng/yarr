@@ -126,8 +126,8 @@ m_switch_task:
     li t1, 0x888
     csrw mie, t1
 
-    la t2, m_trap_vec
-    csrw mtvec, t2
+    # la t2, m_trap_vec
+    # csrw mtvec, t2
 
     mv t6, a0
     .set i, 1 # skip restoring x0
