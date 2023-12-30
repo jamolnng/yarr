@@ -23,3 +23,5 @@ Cargo.lock
 
 
 .gdb_history
+
+dump.S
