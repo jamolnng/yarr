@@ -30,7 +30,7 @@ extern "C" fn m_trap_vec_impl(epc: usize, _frame: *mut TrapFrame) -> usize {
             match interrupt {
                 riscv::register::mcause::Interrupt::MachineTimer => {
                     // sprintln!("Machine timer interrupt");
-        schedule::yarr_set_timer(32768);
+        schedule::yarr_set_timer(32);
                     switch_task(schedule())
                 },
                 _ => panic!("Unhandled interrupt: mcause {mcause:#x?}, epc: {epc:#x?}, interrupt: {interrupt:#x?}")
