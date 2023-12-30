@@ -135,7 +135,7 @@ impl TrapFrame {
         Self {
             regs: Registers::new(),
             pc: ProgramCounter::new(),
-            mode: CPUMode::Machine,
+            mode: CPUMode::User,
         }
     }
 

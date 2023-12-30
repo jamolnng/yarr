@@ -1,3 +1,4 @@
+use hifive1::sprintln;
 // use hifive1::sprintln;
 use riscv::register::mcause::{self, Trap};
 
@@ -30,7 +31,7 @@ extern "C" fn m_trap_vec_impl(epc: usize, _frame: *mut TrapFrame) -> usize {
             match interrupt {
                 riscv::register::mcause::Interrupt::MachineTimer => {
                     // sprintln!("Machine timer interrupt");
-        schedule::yarr_set_timer(32);
+                    schedule::yarr_set_timer(32);
                     switch_task(schedule())
                 },
                 _ => panic!("Unhandled interrupt: mcause {mcause:#x?}, epc: {epc:#x?}, interrupt: {interrupt:#x?}")
@@ -40,7 +41,10 @@ extern "C" fn m_trap_vec_impl(epc: usize, _frame: *mut TrapFrame) -> usize {
         Trap::Exception(exception) => {
             match exception {
                 mcause::Exception::MachineEnvCall => {
-                    // sprintln!("Machine environment call");
+                    sprintln!("Machine environment call");
+                }
+                mcause::Exception::UserEnvCall => {
+                    sprintln!("User environment call");
                 }
                 _ => panic!("Unhandled exception: mcause {mcause:#x?}, epc: {epc:#x?}, exception: {exception:#x?}")
             }

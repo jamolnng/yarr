@@ -32,23 +32,23 @@ impl Stack {
 pub struct Process {
     pub frame: TrapFrame,
     stack: Stack,
-    priority: usize,
+    pid: usize,
 }
 
 impl Process {
-    pub const fn from(priority: usize, data: *mut usize, len: usize) -> Self {
+    pub const fn from(pid: usize, data: *mut usize, len: usize) -> Self {
         Self {
             frame: TrapFrame::new(),
             stack: Stack::from(data, len),
-            priority,
+            pid,
         }
     }
 
-    pub const fn from_sized<const N: usize>(priority: usize, data: *mut [usize; N]) -> Self {
+    pub const fn from_sized<const N: usize>(pid: usize, data: *mut [usize; N]) -> Self {
         Self {
             frame: TrapFrame::new(),
             stack: Stack::from_sized(data),
-            priority,
+            pid,
         }
     }
 

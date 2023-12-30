@@ -11,6 +11,7 @@ mod cpu;
 mod process;
 mod schedule;
 mod trap;
+mod pmp;
 
 const GPIO_CTRL_ADDR: usize = 0x10012000;
 const GPIO_REG_OUTPUT_VAL: usize = 0x0C / 4;
@@ -66,12 +67,6 @@ fn main() -> ! {
     sprintln!("Hello, World! {}MHz", clocks.measure_coreclk().0 / 1000000);
 
     unsafe {
-        sprintln!("{:#x?}", &STACK_01.as_mut_ptr());
-        sprintln!("{:#x?}", &STACK_02.as_mut_ptr());
-        sprintln!("{:#x?}", PROCESS_LIST);
-    }
-
-    unsafe {
         let mut state = mmio_read(GPIO_CTRL_ADDR, GPIO_REG_OUTPUT_VAL);
         state |= RED_LED | GREEN_LED | BLUE_LED;
         mmio_write(GPIO_CTRL_ADDR, GPIO_REG_OUTPUT_VAL, state);
@@ -86,7 +81,7 @@ fn main() -> ! {
             state ^= RED_LED;
             mmio_write(GPIO_CTRL_ADDR, GPIO_REG_OUTPUT_VAL, state);
             for _ in 0..8000000 {}
-            sprintln!("r");
+            core::arch::asm!("ecall");
             // riscv::asm::wfi();
         });
         PROCESS_LIST[1].init(|| loop {
@@ -103,9 +98,11 @@ fn main() -> ! {
             for _ in 0..2000000 {}
             // riscv::asm::wfi();
         });
-        schedule::yarr_set_timer(32);
-        trap::switch_task(schedule::schedule())
     }
+    // enable U-mode in the entire memory map, for fun
+    pmp::init(0, 0x8000_4000, riscv::register::Range::TOR, riscv::register::Permission::RWX, false);
+    schedule::yarr_set_timer(32);
+    trap::switch_task(schedule::schedule())
 }
 
 #[inline(never)]

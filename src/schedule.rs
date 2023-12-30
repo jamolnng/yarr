@@ -19,7 +19,7 @@ pub fn yarr_set_timer(switch_time: u64) {
     }
 }
 
-pub static mut PID: usize = 0;
+pub static mut PID: usize = unsafe { PROCESS_LIST.len() };
 
 pub fn schedule() -> *mut TrapFrame {
     unsafe {
