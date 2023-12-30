@@ -1,3 +1,5 @@
 JLinkGDBServer -device FE310 -if JTAG -speed 4000 -port 3333 -nogui
 
 /opt/riscv/bin/riscv64-unknown-elf-objdump -dSC target/riscv32imac-unknown-none-elf/debug/yarr > dump.S
+
+/opt/riscv/bin/riscv64-unknown-elf-objcopy -S -O binary target/riscv32imac-unknown-none-elf/debug/yarr debug.o
