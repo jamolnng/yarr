@@ -1,27 +1,59 @@
-use crate::cpu::{ProgramCounter, Register, TrapFrame};
+use crate::cpu::{Register, TrapFrame};
 
 #[repr(C)]
+#[derive(Debug)]
+pub struct Stack {
+    data: *mut usize,
+    len: usize,
+}
+
+impl Stack {
+    pub const fn from(data: *mut usize, len: usize) -> Self {
+        Self { data, len: len * core::mem::size_of::<usize>() }
+    }
+
+    pub const fn from_sized<const N: usize>(data: *mut [usize; N]) -> Self {
+        Self { data: data as *mut usize, len: N * core::mem::size_of::<usize>() }
+    }
+
+    #[inline]
+    pub fn begin(&self) -> usize {
+        self.data as *mut usize as usize
+    }
+
+    #[inline]
+    pub fn end(&self) -> usize {
+        self.begin() + self.len
+    }
+}
+
+#[repr(C)]
+#[derive(Debug)]
 pub struct Process {
     pub frame: TrapFrame,
-    stack: [u8; 1024],
+    stack: Stack,
     priority: usize,
 }
 
 impl Process {
-    pub const fn new(priority: usize) -> Self {
+    pub const fn from(priority: usize, data: *mut usize, len: usize) -> Self {
         Self {
             frame: TrapFrame::new(),
-            stack: [0; 1024],
+            stack: Stack::from(data, len),
             priority,
         }
-        // *r.frame.registers().at(Register::SP) = &r.stack as *const u8 as usize;
-        // r.frame.pc(ProgramCounter::from(exec as *const () as usize));
-        // r
+    }
+
+    pub const fn from_sized<const N: usize>(priority: usize, data: *mut [usize; N]) -> Self {
+        Self {
+            frame: TrapFrame::new(),
+            stack: Stack::from_sized(data),
+            priority,
+        }
     }
 
     pub fn init(&mut self, exec: fn() -> !) {
-        *self.frame.registers().at(Register::SP) = self.stack.as_ptr() as usize + self.stack.len();
-        self.frame
-            .pc(ProgramCounter::from(exec as *const () as usize));
+        *self.frame.registers().at(Register::SP) = self.stack.end();
+        self.frame.pc(exec.into());
     }
 }

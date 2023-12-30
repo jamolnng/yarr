@@ -29,11 +29,15 @@ unsafe fn mmio_read(address: usize, offset: usize) -> usize {
     reg.add(offset).read_volatile()
 }
 
-// pub static mut PROCESS_LIST: &'static mut [Process; 3]
-//  = &mut [Process::new(10), Process::new(20), Process::new(30)];
+static mut STACK_01: [usize; 256] = [0; 256];
+static mut STACK_02: [usize; 256] = [0; 256];
+static mut STACK_03: [usize; 256] = [0; 256];
 
-pub static mut PROCESS_LIST: &'static mut [Process; 2]
- = &mut [Process::new(10), Process::new(20)];
+pub static mut PROCESS_LIST: &'static mut [Process] = unsafe { &mut [
+    Process::from_sized(10, &mut STACK_01),
+    Process::from_sized(20, &mut STACK_02),
+    Process::from_sized(30, &mut STACK_03),
+]};
 
 #[entry]
 fn main() -> ! {
@@ -58,7 +62,14 @@ fn main() -> ! {
         115_200.bps(),
         clocks,
     );
-    sprintln!("Hello, World!");
+
+    sprintln!("Hello, World! {}MHz", clocks.measure_coreclk().0 / 1000000);
+
+    unsafe {
+        sprintln!("{:#x?}", &STACK_01.as_mut_ptr());
+        sprintln!("{:#x?}", &STACK_02.as_mut_ptr());
+        sprintln!("{:#x?}", PROCESS_LIST);
+    }
 
     unsafe {
         let mut state = mmio_read(GPIO_CTRL_ADDR, GPIO_REG_OUTPUT_VAL);
@@ -74,26 +85,25 @@ fn main() -> ! {
             let mut state = mmio_read(GPIO_CTRL_ADDR, GPIO_REG_OUTPUT_VAL);
             state ^= RED_LED;
             mmio_write(GPIO_CTRL_ADDR, GPIO_REG_OUTPUT_VAL, state);
-            // for _ in 0..2000000 {}
-            riscv::asm::wfi();
+            for _ in 0..8000000 {}
+            sprintln!("r");
+            // riscv::asm::wfi();
         });
         PROCESS_LIST[1].init(|| loop {
             let mut state = mmio_read(GPIO_CTRL_ADDR, GPIO_REG_OUTPUT_VAL);
             state ^= GREEN_LED;
             mmio_write(GPIO_CTRL_ADDR, GPIO_REG_OUTPUT_VAL, state);
-            // for _ in 0..1000000 {}
-            riscv::asm::wfi();
+            for _ in 0..4000000 {}
+            // riscv::asm::wfi();
         });
-        // PROCESS_LIST[2].init(|| {
-        //     loop {
-        //         let mut state = mmio_read(GPIO_CTRL_ADDR, GPIO_REG_OUTPUT_VAL);
-        //         state ^= BLUE_LED;
-        //         mmio_write(GPIO_CTRL_ADDR, GPIO_REG_OUTPUT_VAL, state);
-        //         for _ in 0..500000 {
-        //         }
-        //     }
-        // });
-        schedule::yarr_set_timer(32768);
+        PROCESS_LIST[2].init(|| loop {
+            let mut state = mmio_read(GPIO_CTRL_ADDR, GPIO_REG_OUTPUT_VAL);
+            state ^= BLUE_LED;
+            mmio_write(GPIO_CTRL_ADDR, GPIO_REG_OUTPUT_VAL, state);
+            for _ in 0..2000000 {}
+            // riscv::asm::wfi();
+        });
+        schedule::yarr_set_timer(32);
         trap::switch_task(schedule::schedule())
     }
 }

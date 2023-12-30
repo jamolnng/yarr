@@ -94,7 +94,6 @@ impl Registers {
     }
 
     #[inline]
-    #[allow(dead_code)]
     pub fn at(&mut self, reg: Register) -> &mut usize {
         &mut self.regs[reg as usize]
     }
@@ -105,12 +104,21 @@ impl Registers {
 pub struct ProgramCounter(usize);
 
 impl ProgramCounter {
+    #[inline]
     pub const fn new() -> Self {
         Self { 0: 0 }
     }
 
+    #[inline]
     pub const fn from(pc: usize) -> Self {
         Self { 0: pc }
+    }
+}
+
+impl Into<ProgramCounter> for fn()->! {
+    #[inline]
+    fn into(self) -> ProgramCounter {
+        ProgramCounter::from(self as *const() as usize)
     }
 }
 
