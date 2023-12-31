@@ -137,7 +137,7 @@ impl TrapFrame {
         let mut r = Self {
             regs: Registers::new(),
             pc: pc,
-            mode: CPUMode::User,
+            mode: CPUMode::Machine,
         };
         r.regs.set(Register::SP, sp);
         r

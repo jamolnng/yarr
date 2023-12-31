@@ -1,7 +1,6 @@
 use crate::{
-    process::{Process, State},
+    process::{Process, State, PROCESS_LIST},
     trap::switch_task,
-    PROCESS_LIST,
 };
 
 #[allow(unused_variables)]
@@ -45,10 +44,10 @@ impl Scheduler for RoundRobin {
     fn schedule(&mut self) -> *mut Process {
         unsafe {
             self.current += 1;
-            if self.current >= PROCESS_LIST.len() {
+            if self.current >= (*PROCESS_LIST.unwrap()).len() {
                 self.current = 0;
             }
-            PROCESS_LIST
+            (*PROCESS_LIST.unwrap())
                 .iter_mut()
                 .skip(self.current)
                 .flatten()
@@ -61,7 +60,7 @@ impl Scheduler for RoundRobin {
 impl Scheduler for RealTime {
     fn schedule(&mut self) -> *mut Process {
         unsafe {
-            PROCESS_LIST
+            (*PROCESS_LIST.unwrap())
                 .iter_mut()
                 .flatten()
                 .filter(|p| *p.state() == State::Running)
@@ -71,13 +70,15 @@ impl Scheduler for RealTime {
     }
 }
 
-static mut SCHEDULER: Option<&'static mut dyn Scheduler> = None;
+static mut SCHEDULER: Option<*mut dyn Scheduler> = None;
 
 pub fn schedule_and_switch() -> ! {
-    unsafe { switch_task(SCHEDULER.as_mut().unwrap().schedule()) }
+    unsafe {
+        switch_task((*SCHEDULER.unwrap()).schedule());
+    }
 }
 
-pub fn set_scheduler(scheduler: &'static mut dyn Scheduler) {
+pub fn init<'a>(scheduler: *mut dyn Scheduler) {
     unsafe {
         SCHEDULER = Some(scheduler);
     }

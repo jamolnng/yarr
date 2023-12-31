@@ -45,6 +45,7 @@ impl MemoryRegion for Stack {
 #[derive(Debug)]
 pub struct StaticStack<const N: usize>([u8; N]);
 
+#[allow(dead_code)]
 impl<const N: usize> StaticStack<N> {
     pub const fn new() -> Self {
         Self([0; N])
@@ -74,6 +75,7 @@ impl<const N: usize> MemoryRegion for StaticStack<N> {
 
 #[repr(C)]
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[allow(dead_code)]
 pub enum Sleep {
     Ticks(usize),
     Until(usize),
@@ -98,11 +100,27 @@ pub struct Process {
 }
 
 impl Process {
-    pub fn new<S: MemoryRegion>(pid: usize, stack: *mut S, exec: fn() -> !) -> Self {
-        Self {
-            frame: TrapFrame::new(unsafe { stack.as_ref() }.unwrap().end(), exec.into()),
-            stack: unsafe { stack.as_ref() }.unwrap().end(),
+    #[allow(dead_code)]
+    pub fn from<S: MemoryRegion>(pid: usize, stack: *mut S, exec: fn() -> !) -> Self {
+        // Self {
+        //     frame: TrapFrame::new(unsafe { stack.as_ref() }.unwrap().end(), exec.into()),
+        //     stack: unsafe { stack.as_ref() }.unwrap().begin(),
+        //     pid,
+        //     state: State::Running,
+        // }
+        Self::new(
             pid,
+            unsafe { stack.as_ref() }.unwrap().begin(),
+            unsafe { stack.as_ref() }.unwrap().len(),
+            exec.into(),
+        )
+    }
+
+    pub fn new(pid: usize, stack: usize, stack_len: usize, exec: fn() -> !) -> Self {
+        Self {
+            frame: TrapFrame::new(stack + stack_len, exec.into()),
+            stack: stack,
+            pid: pid,
             state: State::Running,
         }
     }
@@ -113,5 +131,13 @@ impl Process {
 
     pub fn pid(&self) -> usize {
         self.pid
+    }
+}
+
+pub(crate) static mut PROCESS_LIST: Option<*mut [Option<Process>]> = None;
+
+pub fn init(processes: *mut [Option<Process>]) {
+    unsafe {
+        PROCESS_LIST = Some(processes);
     }
 }
