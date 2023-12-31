@@ -41,7 +41,7 @@ impl MemoryRegion for Stack {
     }
 }
 
-#[repr(C, align(64))]
+#[repr(C, align(4))]
 #[derive(Debug)]
 pub struct StaticStack<const N: usize>([u8; N]);
 
