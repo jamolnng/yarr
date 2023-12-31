@@ -7,17 +7,6 @@ pub trait MemoryRegion {
     fn end(&self) -> usize;
 }
 
-impl<'a> core::fmt::Debug for &'a dyn MemoryRegion {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(
-            f,
-            "MemoryRegion{{Begin: {:x}, Length: {:x}}}",
-            self.begin(),
-            self.len()
-        )
-    }
-}
-
 #[repr(C)]
 #[derive(Debug)]
 pub struct Stack {
