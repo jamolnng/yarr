@@ -1,7 +1,5 @@
 #![allow(dead_code)]
 
-use core::ptr::NonNull;
-
 use riscv::register;
 
 use crate::process::MemoryRegion;
@@ -108,12 +106,5 @@ pub fn lock_memory_region(
     permission: Permission,
     locked: bool,
 ) -> Result<(), PMPError> {
-    let region = NonNull::new(region).ok_or(PMPError(0))?;
-    lock_region(
-        index,
-        unsafe { region.as_ref().begin() },
-        unsafe { region.as_ref().len() },
-        permission,
-        locked,
-    )
+    lock_region(index, region.begin(), region.len(), permission, locked)
 }
