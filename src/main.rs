@@ -1,11 +1,11 @@
 #![no_std]
 #![no_main]
 
-use cpu::TrapFrame;
 use hifive1::hal::prelude::*;
 use hifive1::{hal::DeviceResources, pin, sprintln};
 use process::{Process, StaticStack};
 use riscv_rt::entry;
+use schedule::{RoundRobin, Scheduler};
 
 mod asm;
 mod cpu;
@@ -31,15 +31,16 @@ unsafe fn mmio_read(address: usize, offset: usize) -> usize {
     reg.add(offset).read_volatile()
 }
 
-static mut TRAP_01: TrapFrame = TrapFrame::new();
-static mut TRAP_02: TrapFrame = TrapFrame::new();
-static mut TRAP_03: TrapFrame = TrapFrame::new();
-
 static mut STACK_01: StaticStack<1024> = StaticStack::new();
-static mut STACK_02: StaticStack<512> = StaticStack::new();
-static mut STACK_03: StaticStack<2048> = StaticStack::new();
+static mut STACK_02: StaticStack<1024> = StaticStack::new();
+static mut STACK_03: StaticStack<1024> = StaticStack::new();
 
 pub static mut PROCESS_LIST: &'static mut [Option<Process>] = &mut [None, None, None];
+
+pub static mut LOCAL_SCHEDULER: RoundRobin = RoundRobin::new();
+
+#[no_mangle]
+pub static mut SCHEDULER: Option<&'static mut dyn Scheduler> = None;
 
 #[entry]
 fn main() -> ! {
@@ -81,7 +82,7 @@ fn main() -> ! {
         }
 
         unsafe {
-            PROCESS_LIST[0] = Some(Process::new(10, &mut TRAP_01, &mut STACK_01, || loop {
+            PROCESS_LIST[0] = Some(Process::new(10, &mut STACK_01, || loop {
                 let mut state = mmio_read(GPIO_CTRL_ADDR, GPIO_REG_OUTPUT_VAL);
                 state ^= RED_LED;
                 mmio_write(GPIO_CTRL_ADDR, GPIO_REG_OUTPUT_VAL, state);
@@ -91,7 +92,7 @@ fn main() -> ! {
                 // core::arch::asm!("ecall");
                 // riscv::asm::wfi();
             }));
-            PROCESS_LIST[1] = Some(Process::new(20, &mut TRAP_02, &mut STACK_02, || loop {
+            PROCESS_LIST[1] = Some(Process::new(20, &mut STACK_02, || loop {
                 let mut state = mmio_read(GPIO_CTRL_ADDR, GPIO_REG_OUTPUT_VAL);
                 state ^= GREEN_LED;
                 mmio_write(GPIO_CTRL_ADDR, GPIO_REG_OUTPUT_VAL, state);
@@ -100,7 +101,7 @@ fn main() -> ! {
                 }
                 // riscv::asm::wfi();
             }));
-            PROCESS_LIST[2] = Some(Process::new(30, &mut TRAP_03, &mut STACK_03, || loop {
+            PROCESS_LIST[2] = Some(Process::new(30, &mut STACK_03, || loop {
                 let mut state = mmio_read(GPIO_CTRL_ADDR, GPIO_REG_OUTPUT_VAL);
                 state ^= BLUE_LED;
                 mmio_write(GPIO_CTRL_ADDR, GPIO_REG_OUTPUT_VAL, state);
@@ -109,6 +110,8 @@ fn main() -> ! {
                 }
                 // riscv::asm::wfi();
             }));
+
+            SCHEDULER = Some(&mut LOCAL_SCHEDULER);
         }
         // configure default PMP for FE310-G002
         // 0x0000_0000 - 0x0200_0000: on chip non-volatile memory
@@ -125,7 +128,7 @@ fn main() -> ! {
         pmp::lock(5, 0x8000_4000, pmp::Range::TOR, pmp::Permission::RW, false).unwrap();
     }
     schedule::yarr_set_timer(32);
-    trap::switch_task(schedule::schedule())
+    trap::switch_task(unsafe { SCHEDULER.as_mut().unwrap_unchecked().schedule() })
 }
 
 #[inline(never)]

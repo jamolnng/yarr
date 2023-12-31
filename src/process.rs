@@ -1,10 +1,21 @@
-use crate::cpu::{Register, TrapFrame};
+use crate::cpu::TrapFrame;
 
 pub trait MemoryRegion {
     fn take(&self);
     fn begin(&self) -> usize;
     fn len(&self) -> usize;
     fn end(&self) -> usize;
+}
+
+impl<'a> core::fmt::Debug for &'a dyn MemoryRegion {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(
+            f,
+            "MemoryRegion{{Begin: {:x}, Length: {:x}}}",
+            self.begin(),
+            self.len()
+        )
+    }
 }
 
 #[repr(C)]
@@ -17,10 +28,7 @@ pub struct Stack {
 #[allow(dead_code)]
 impl Stack {
     pub const fn from(data: *mut u8, len: usize) -> Self {
-        Self {
-            data,
-            len,
-        }
+        Self { data, len }
     }
 }
 
@@ -76,27 +84,45 @@ impl<const N: usize> MemoryRegion for StaticStack<N> {
 }
 
 #[repr(C)]
-pub struct Process<'a> {
-    frame: &'a mut TrapFrame,
-    stack: &'a dyn MemoryRegion,
-    pid: usize,
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Sleep {
+    Ticks(usize),
+    Until(usize),
 }
 
-impl<'a> Process<'a> {
-    pub fn take(&mut self) -> &mut TrapFrame {
-        // unsafe {
-        //     // self.stack.as_ref().take();
-        // }
-        &mut self.frame
+#[repr(C)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[allow(dead_code)]
+pub enum State {
+    Running,
+    Waiting,
+    Sleeping(Sleep),
+}
+
+#[repr(C)]
+#[derive(Debug)]
+pub struct Process {
+    frame: TrapFrame,
+    stack: usize,
+    pid: usize,
+    state: State,
+}
+
+impl Process {
+    pub fn new<S: MemoryRegion>(pid: usize, stack: *mut S, exec: fn() -> !) -> Self {
+        Self {
+            frame: TrapFrame::new(unsafe { stack.as_ref() }.unwrap().end(), exec.into()),
+            stack: unsafe { stack.as_ref() }.unwrap().end(),
+            pid,
+            state: State::Running,
+        }
     }
 
-    pub fn new(pid: usize, frame: &'a mut TrapFrame, stack: &'a mut dyn MemoryRegion, exec: fn() -> !) -> Self {
-        frame.registers().set(Register::SP, stack.end());
-        frame.pc(exec.into());
-        Self {
-            frame,
-            stack,
-            pid,
-        }
+    pub fn state(&self) -> &State {
+        &self.state
+    }
+
+    pub fn pid(&self) -> usize {
+        self.pid
     }
 }

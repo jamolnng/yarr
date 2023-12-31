@@ -9,6 +9,7 @@ pub enum CPUMode {
 
 #[repr(usize)]
 #[derive(Clone, Copy, Debug)]
+#[allow(dead_code)]
 pub enum Register {
     X0 = 0,
     X1,
@@ -44,6 +45,7 @@ pub enum Register {
     X31,
 }
 
+#[allow(dead_code)]
 impl Register {
     pub const ZERO: Register = Register::X0;
     pub const RA: Register = Register::X1;
@@ -93,11 +95,6 @@ impl Registers {
         Self { regs: [0; 32] }
     }
 
-    // #[inline]
-    // pub fn at(&mut self, reg: Register) -> &mut usize {
-    //     &mut self.regs[reg as usize]
-    // }
-
     #[inline]
     pub fn set(&mut self, reg: Register, val: usize) {
         self.regs[reg as usize] = val;
@@ -136,20 +133,24 @@ pub struct TrapFrame {
 }
 
 impl TrapFrame {
-    pub const fn new() -> Self {
-        Self {
+    pub fn new(sp: usize, pc: ProgramCounter) -> Self {
+        let mut r = Self {
             regs: Registers::new(),
-            pc: ProgramCounter::new(),
+            pc: pc,
             mode: CPUMode::User,
-        }
+        };
+        r.regs.set(Register::SP, sp);
+        r
     }
 
     #[inline]
+    #[allow(dead_code)]
     pub fn registers(&mut self) -> &mut Registers {
         &mut self.regs
     }
 
     #[inline]
+    #[allow(dead_code)]
     pub fn pc(&mut self, pc: ProgramCounter) {
         self.pc = pc;
     }

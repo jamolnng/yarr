@@ -3,26 +3,24 @@ use hifive1::sprintln;
 use riscv::register::mcause::{self, Trap};
 
 use crate::{
-    cpu::TrapFrame,
-    schedule::{self, schedule}, process::Process,
+    process::Process,
+    schedule::{self, SCHEDULER},
 };
 
 extern "C" {
     pub fn m_trap_vec() -> !;
-    pub fn m_switch_task(frame: *mut TrapFrame) -> !;
+    pub fn m_switch_task(process: *mut Process) -> !;
 }
 
 #[inline]
-pub fn switch_task(frame: *mut TrapFrame) -> ! {
-    unsafe {
-        m_switch_task(frame)
-    }
+pub fn switch_task(process: *mut Process) -> ! {
+    unsafe { m_switch_task(process) }
 }
 
 #[no_mangle]
 #[inline(never)]
 #[link_section = ".trap"]
-extern "C" fn m_trap_vec_impl(epc: usize, _frame: *mut Process) -> usize {
+extern "C" fn m_trap_vec_impl(epc: usize, _process: *mut Process) -> usize {
     let mcause = mcause::read();
 
     // sprintln!("mcause: {:#x?},\r\nepc: {:#x?}", mcause, epc);
@@ -34,7 +32,7 @@ extern "C" fn m_trap_vec_impl(epc: usize, _frame: *mut Process) -> usize {
                 riscv::register::mcause::Interrupt::MachineTimer => {
                     // sprintln!("Machine timer interrupt");
                     schedule::yarr_set_timer(32);
-                    switch_task(schedule())
+                    switch_task(unsafe { SCHEDULER.as_mut().unwrap_unchecked().schedule() })
                 },
                 _ => panic!("Unhandled interrupt: mcause {mcause:#x?}, epc: {epc:#x?}, interrupt: {interrupt:#x?}")
             }

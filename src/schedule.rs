@@ -1,4 +1,7 @@
-use crate::{PROCESS_LIST, cpu::TrapFrame};
+use crate::{
+    process::{Process, State},
+    PROCESS_LIST,
+};
 
 #[allow(unused_variables)]
 #[allow(dead_code)]
@@ -19,17 +22,56 @@ pub fn yarr_set_timer(switch_time: u64) {
     }
 }
 
-pub static mut PID: usize = unsafe { PROCESS_LIST.len() };
+pub trait Scheduler {
+    fn schedule(&mut self) -> *mut Process;
+}
 
-pub fn schedule() -> *mut TrapFrame {
-    unsafe {
-        PID += 1;
-        if PID >= PROCESS_LIST.len() {
-            PID = 0;
-        }
-        match &mut PROCESS_LIST[PID] {
-            Some(process) => process.take(),
-            None => schedule(),
+#[derive(Debug)]
+pub struct RoundRobin {
+    current: usize,
+}
+
+impl RoundRobin {
+    pub const fn new() -> Self {
+        Self {
+            current: 0
         }
     }
+}
+
+#[derive(Debug)]
+pub struct RealTime;
+
+impl Scheduler for RoundRobin {
+    fn schedule(&mut self) -> *mut Process {
+        unsafe {
+            self.current += 1;
+            if self.current >= PROCESS_LIST.len() {
+                self.current = 0;
+            }
+            PROCESS_LIST
+                .iter_mut()
+                .skip(self.current)
+                .flatten()
+                .next()
+                .unwrap()
+        }
+    }
+}
+
+impl Scheduler for RealTime {
+    fn schedule(&mut self) -> *mut Process {
+        unsafe {
+            PROCESS_LIST
+                .iter_mut()
+                .flatten()
+                .filter(|p| *p.state() == State::Running)
+                .max_by_key(|p| p.pid())
+                .unwrap()
+        }
+    }
+}
+
+extern "Rust" {
+    pub static mut SCHEDULER: Option<&'static mut dyn Scheduler>;
 }
