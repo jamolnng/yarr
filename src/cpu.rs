@@ -93,9 +93,14 @@ impl Registers {
         Self { regs: [0; 32] }
     }
 
+    // #[inline]
+    // pub fn at(&mut self, reg: Register) -> &mut usize {
+    //     &mut self.regs[reg as usize]
+    // }
+
     #[inline]
-    pub fn at(&mut self, reg: Register) -> &mut usize {
-        &mut self.regs[reg as usize]
+    pub fn set(&mut self, reg: Register, val: usize) {
+        self.regs[reg as usize] = val;
     }
 }
 

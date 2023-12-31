@@ -1,4 +1,4 @@
-use crate::{cpu::TrapFrame, PROCESS_LIST};
+use crate::{PROCESS_LIST, cpu::TrapFrame};
 
 #[allow(unused_variables)]
 #[allow(dead_code)]
@@ -27,6 +27,9 @@ pub fn schedule() -> *mut TrapFrame {
         if PID >= PROCESS_LIST.len() {
             PID = 0;
         }
-        &mut PROCESS_LIST[PID].frame
+        match &mut PROCESS_LIST[PID] {
+            Some(process) => process.take(),
+            None => schedule(),
+        }
     }
 }

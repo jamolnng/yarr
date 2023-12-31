@@ -4,7 +4,7 @@ use riscv::register::mcause::{self, Trap};
 
 use crate::{
     cpu::TrapFrame,
-    schedule::{self, schedule},
+    schedule::{self, schedule}, process::Process,
 };
 
 extern "C" {
@@ -14,13 +14,15 @@ extern "C" {
 
 #[inline]
 pub fn switch_task(frame: *mut TrapFrame) -> ! {
-    unsafe { m_switch_task(frame) }
+    unsafe {
+        m_switch_task(frame)
+    }
 }
 
 #[no_mangle]
 #[inline(never)]
 #[link_section = ".trap"]
-extern "C" fn m_trap_vec_impl(epc: usize, _frame: *mut TrapFrame) -> usize {
+extern "C" fn m_trap_vec_impl(epc: usize, _frame: *mut Process) -> usize {
     let mcause = mcause::read();
 
     // sprintln!("mcause: {:#x?},\r\nepc: {:#x?}", mcause, epc);

@@ -1,59 +1,102 @@
 use crate::cpu::{Register, TrapFrame};
 
+pub trait MemoryRegion {
+    fn take(&self);
+    fn begin(&self) -> usize;
+    fn len(&self) -> usize;
+    fn end(&self) -> usize;
+}
+
 #[repr(C)]
 #[derive(Debug)]
 pub struct Stack {
-    data: *mut usize,
+    data: *mut u8,
     len: usize,
 }
 
+#[allow(dead_code)]
 impl Stack {
-    pub const fn from(data: *mut usize, len: usize) -> Self {
-        Self { data, len: len * core::mem::size_of::<usize>() }
+    pub const fn from(data: *mut u8, len: usize) -> Self {
+        Self {
+            data,
+            len,
+        }
     }
+}
 
-    pub const fn from_sized<const N: usize>(data: *mut [usize; N]) -> Self {
-        Self { data: data as *mut usize, len: N * core::mem::size_of::<usize>() }
-    }
+impl MemoryRegion for Stack {
+    #[inline]
+    fn take(&self) {}
 
     #[inline]
-    pub fn begin(&self) -> usize {
+    fn begin(&self) -> usize {
         self.data as *mut usize as usize
     }
 
     #[inline]
-    pub fn end(&self) -> usize {
+    fn end(&self) -> usize {
         self.begin() + self.len
+    }
+
+    #[inline]
+    fn len(&self) -> usize {
+        self.len
+    }
+}
+
+#[repr(C, align(64))]
+#[derive(Debug)]
+pub struct StaticStack<const N: usize>([u8; N]);
+
+impl<const N: usize> StaticStack<N> {
+    pub const fn new() -> Self {
+        Self([0; N])
+    }
+}
+
+impl<const N: usize> MemoryRegion for StaticStack<N> {
+    fn take(&self) {
+        // pmp stuff
+    }
+
+    #[inline]
+    fn begin(&self) -> usize {
+        self.0.as_ptr() as usize
+    }
+
+    #[inline]
+    fn end(&self) -> usize {
+        self.begin() + self.len()
+    }
+
+    #[inline]
+    fn len(&self) -> usize {
+        self.0.len()
     }
 }
 
 #[repr(C)]
-#[derive(Debug)]
-pub struct Process {
-    pub frame: TrapFrame,
-    stack: Stack,
+pub struct Process<'a> {
+    frame: &'a mut TrapFrame,
+    stack: &'a dyn MemoryRegion,
     pid: usize,
 }
 
-impl Process {
-    pub const fn from(pid: usize, data: *mut usize, len: usize) -> Self {
-        Self {
-            frame: TrapFrame::new(),
-            stack: Stack::from(data, len),
-            pid,
-        }
+impl<'a> Process<'a> {
+    pub fn take(&mut self) -> &mut TrapFrame {
+        // unsafe {
+        //     // self.stack.as_ref().take();
+        // }
+        &mut self.frame
     }
 
-    pub const fn from_sized<const N: usize>(pid: usize, data: *mut [usize; N]) -> Self {
+    pub fn new(pid: usize, frame: &'a mut TrapFrame, stack: &'a mut dyn MemoryRegion, exec: fn() -> !) -> Self {
+        frame.registers().set(Register::SP, stack.end());
+        frame.pc(exec.into());
         Self {
-            frame: TrapFrame::new(),
-            stack: Stack::from_sized(data),
+            frame,
+            stack,
             pid,
         }
-    }
-
-    pub fn init(&mut self, exec: fn() -> !) {
-        *self.frame.registers().at(Register::SP) = self.stack.end();
-        self.frame.pc(exec.into());
     }
 }
