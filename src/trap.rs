@@ -4,16 +4,16 @@ use riscv::register::mcause::{self, Trap};
 
 use crate::{
     process::Process,
-    schedule::{self, SCHEDULER},
+    schedule
 };
 
 extern "C" {
-    pub fn m_trap_vec() -> !;
-    pub fn m_switch_task(process: *mut Process) -> !;
+    fn m_trap_vec() -> !;
+    fn m_switch_task(process: *mut Process) -> !;
 }
 
 #[inline]
-pub fn switch_task(process: *mut Process) -> ! {
+pub(crate) fn switch_task(process: *mut Process) -> ! {
     unsafe { m_switch_task(process) }
 }
 
@@ -31,8 +31,8 @@ extern "C" fn m_trap_vec_impl(epc: usize, _process: *mut Process) -> usize {
             match interrupt {
                 riscv::register::mcause::Interrupt::MachineTimer => {
                     // sprintln!("Machine timer interrupt");
-                    schedule::yarr_set_timer(32);
-                    switch_task(unsafe { SCHEDULER.as_mut().unwrap_unchecked().schedule() })
+                    schedule::set_timer(32);
+                    schedule::schedule_and_switch()
                 },
                 _ => panic!("Unhandled interrupt: mcause {mcause:#x?}, epc: {epc:#x?}, interrupt: {interrupt:#x?}")
             }

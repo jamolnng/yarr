@@ -1,5 +1,6 @@
 use crate::{
     process::{Process, State},
+    trap::switch_task,
     PROCESS_LIST,
 };
 
@@ -16,7 +17,7 @@ const MMIO_MTIME: *const u64 = 0x0200_BFF8 as *const u64;
 #[allow(unused_variables)]
 #[allow(dead_code)]
 #[allow(unused_unsafe)]
-pub fn yarr_set_timer(switch_time: u64) {
+pub fn set_timer(switch_time: u64) {
     unsafe {
         MMIO_MTIMECMP.write_volatile(MMIO_MTIME.read_volatile().wrapping_add(switch_time));
     }
@@ -33,9 +34,7 @@ pub struct RoundRobin {
 
 impl RoundRobin {
     pub const fn new() -> Self {
-        Self {
-            current: 0
-        }
+        Self { current: 0 }
     }
 }
 
@@ -72,6 +71,14 @@ impl Scheduler for RealTime {
     }
 }
 
-extern "Rust" {
-    pub static mut SCHEDULER: Option<&'static mut dyn Scheduler>;
+static mut SCHEDULER: Option<&'static mut dyn Scheduler> = None;
+
+pub fn schedule_and_switch() -> ! {
+    unsafe { switch_task(SCHEDULER.as_mut().unwrap().schedule()) }
+}
+
+pub fn set_scheduler(scheduler: &'static mut dyn Scheduler) {
+    unsafe {
+        SCHEDULER = Some(scheduler);
+    }
 }

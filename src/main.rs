@@ -5,7 +5,7 @@ use hifive1::hal::prelude::*;
 use hifive1::{hal::DeviceResources, pin, sprintln};
 use process::{Process, StaticStack};
 use riscv_rt::entry;
-use schedule::{RoundRobin, Scheduler};
+use schedule::RoundRobin;
 
 mod asm;
 mod cpu;
@@ -37,10 +37,7 @@ static mut STACK_03: StaticStack<1024> = StaticStack::new();
 
 pub static mut PROCESS_LIST: &'static mut [Option<Process>] = &mut [None, None, None];
 
-pub static mut LOCAL_SCHEDULER: RoundRobin = RoundRobin::new();
-
-#[no_mangle]
-pub static mut SCHEDULER: Option<&'static mut dyn Scheduler> = None;
+pub static mut SCHEDULER: RoundRobin = RoundRobin::new();
 
 #[entry]
 fn main() -> ! {
@@ -111,7 +108,7 @@ fn main() -> ! {
                 // riscv::asm::wfi();
             }));
 
-            SCHEDULER = Some(&mut LOCAL_SCHEDULER);
+            schedule::set_scheduler(&mut SCHEDULER);
         }
         // configure default PMP for FE310-G002
         // 0x0000_0000 - 0x0200_0000: on chip non-volatile memory
@@ -127,8 +124,8 @@ fn main() -> ! {
         pmp::lock(4, 0x8000_0000, pmp::Range::TOR, pmp::Permission::RX, false).unwrap();
         pmp::lock(5, 0x8000_4000, pmp::Range::TOR, pmp::Permission::RW, false).unwrap();
     }
-    schedule::yarr_set_timer(32);
-    trap::switch_task(unsafe { SCHEDULER.as_mut().unwrap_unchecked().schedule() })
+    schedule::set_timer(32);
+    schedule::schedule_and_switch()
 }
 
 #[inline(never)]
