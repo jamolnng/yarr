@@ -13,4 +13,4 @@ categories = ["embedded", "no-std"]
 
 [dependencies]
 riscv = "0.10.1"
-yarr-common = { path = "../yarr-common", version = "*" }
+yarr-common = { path = "../yarr-common", version = "0.0.0" }
