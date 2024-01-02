@@ -2,9 +2,17 @@
 name = "yarr"
 version = "0.0.0"
 edition = "2021"
+license = "MIT"
+description = "Toy real-time operating system"
+homepage = "https://github.com/jamolnng/yarr"
+documentation = "https://github.com/jamolnng/yarr"
+repository = "https://github.com/jamolnng/yarr"
+readme = "README.md"
+keywords = ["riscv", "rtos"]
+categories = ["embedded", "no-std"]
 
 [dependencies]
 riscv = "0.10.1"
 riscv-rt = "0.11.0"
-yarr-common = { path = "../yarr-common" }
-yarr-riscv = { path = "../yarr-riscv", optional = true }
+yarr-common = { path = "../yarr-common", version = "*" }
+yarr-riscv = { path = "../yarr-riscv", optional = true, version = "*" }
