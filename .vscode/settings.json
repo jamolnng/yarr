@@ -1,0 +1,16 @@
+{
+    "rust-analyzer.cargo.target": "riscv32imac-unknown-none-elf",
+    "rust-analyzer.check.overrideCommand": [
+        "cargo",
+        "clippy",
+        "--message-format=json",
+        "--bins",
+        "--all-features",
+        "--target",
+        "riscv32imac-unknown-none-elf",
+    ],
+    "rust-analyzer.check.allTargets": false,
+    "rust-analyzer.checkOnSave": true,
+    "rust-analyzer.workspace.symbol.search.kind": "all_symbols",
+    "rust-analyzer.workspace.symbol.search.scope": "workspace_and_dependencies",
+}

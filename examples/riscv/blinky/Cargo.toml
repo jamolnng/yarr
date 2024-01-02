@@ -1,0 +1,15 @@
+[package]
+name = "riscv-blinky"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[[bin]]
+name = "riscv-blinky"
+
+[dependencies]
+embedded-hal = "0.2.3"
+hifive1 = { version = "0.12.0", features = ["board-hifive1-revb"] }
+riscv = "0.10.1"
+riscv-rt = "0.11.0"
+yarr = { path = "../../../yarr", features = ["yarr-riscv"] }
