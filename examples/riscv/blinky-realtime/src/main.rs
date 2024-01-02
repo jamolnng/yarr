@@ -11,7 +11,7 @@ static mut PROCESSES: [Process; 4] = [
     Process::new(),
     Process::new(),
     Process::new(),
-    Process::new(),
+    Process::new(), // idle
 ];
 static mut PIDS: [usize; 3] = [10, 20, 30];
 static mut PCS: [*const (); 3] = [
@@ -20,8 +20,8 @@ static mut PCS: [*const (); 3] = [
     blink3 as *const (),
 ];
 static mut SCHEDULER: SimpleRealTime = SimpleRealTime::new(unsafe { &mut PROCESSES });
-static mut STACKS: [[u8; 512]; 3] = [[0; 512], [0; 512], [0; 512]];
-static mut IDLE_STACK: [u8; 32] = [0; 32];
+static mut STACKS: [[usize; 128]; 3] = [[0; 128], [0; 128], [0; 128]];
+static mut IDLE_STACK: [usize; 8] = [0; 8];
 
 #[entry]
 fn main() -> ! {
@@ -31,14 +31,14 @@ fn main() -> ! {
             PROCESSES[i].init(
                 PIDS[i],
                 STACKS[i].as_mut_ptr() as usize,
-                STACKS[i].len(),
+                core::mem::size_of_val(&STACKS[i]),
                 PCS[i] as usize,
             );
         }
         PROCESSES.last_mut().unwrap().init(
             usize::MAX,
             IDLE_STACK.as_mut_ptr() as usize,
-            IDLE_STACK.len(),
+            core::mem::size_of_val(&IDLE_STACK),
             idle_task as *const () as usize,
         )
     }
@@ -48,27 +48,10 @@ fn main() -> ! {
     yarr::start()
 }
 
-const GPIO_CTRL_ADDR: usize = 0x10012000;
-const GPIO_REG_OUTPUT_VAL: usize = 0x0C;
-const GPIO_REG_OUTPUT_EN: usize = 0x08;
-const RED_LED: usize = 0x00400000;
-const GREEN_LED: usize = 0x00080000;
-const BLUE_LED: usize = 0x00200000;
-
-unsafe fn mmio_write(address: usize, offset: usize, value: usize) {
-    let reg = (address + offset) as *mut usize;
-    reg.write_volatile(value);
-}
-
-unsafe fn mmio_read(address: usize, offset: usize) -> usize {
-    let reg = (address + offset) as *mut usize;
-    reg.read_volatile()
-}
-
 fn idle_task() -> ! {
     loop {
         // sprintln!("idle");
-        yarr::yarr_wfi();
+        yarr::syscall::syscall_yield();
     }
 }
 
@@ -143,4 +126,21 @@ fn panic(info: &core::panic::PanicInfo) -> ! {
     loop {
         core::sync::atomic::compiler_fence(core::sync::atomic::Ordering::SeqCst);
     }
+}
+
+const GPIO_CTRL_ADDR: usize = 0x10012000;
+const GPIO_REG_OUTPUT_VAL: usize = 0x0C;
+const GPIO_REG_OUTPUT_EN: usize = 0x08;
+const RED_LED: usize = 0x00400000;
+const GREEN_LED: usize = 0x00080000;
+const BLUE_LED: usize = 0x00200000;
+
+unsafe fn mmio_write(address: usize, offset: usize, value: usize) {
+    let reg = (address + offset) as *mut usize;
+    reg.write_volatile(value);
+}
+
+unsafe fn mmio_read(address: usize, offset: usize) -> usize {
+    let reg = (address + offset) as *mut usize;
+    reg.read_volatile()
 }
