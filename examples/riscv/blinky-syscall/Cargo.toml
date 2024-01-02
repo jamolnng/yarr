@@ -12,6 +12,6 @@ embedded-hal = "0.2.3"
 hifive1 = { version = "0.12.0", features = ["board-hifive1-revb"] }
 riscv = "0.10.1"
 riscv-rt = "0.11.0"
-yarr = { path = "../../../yarr", features = ["yarr-riscv"] }
+yarr = { path = "../../../yarr" }
 yarr-common = { path = "../../../yarr-common" }
 arrayvec = { version = "0.7.4", default-features = false }

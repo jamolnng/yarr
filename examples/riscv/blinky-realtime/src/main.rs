@@ -50,8 +50,7 @@ fn main() -> ! {
 
 fn idle_task() -> ! {
     loop {
-        // sprintln!("idle");
-        yarr::syscall::syscall_yield();
+        yarr::yarr_wfi();
     }
 }
 
