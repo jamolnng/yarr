@@ -7,7 +7,12 @@ use riscv_rt::entry;
 use yarr::process::Process;
 use yarr::schedule::SimpleRoundRobin;
 
-static mut PROCESSES: [Process; 3] = [Process::new(), Process::new(), Process::new()];
+static mut PROCESSES: [Process; 4] = [
+    Process::new(),
+    Process::new(),
+    Process::new(),
+    Process::new(),
+];
 static mut PIDS: [usize; 3] = [10, 20, 30];
 static mut PCS: [*const (); 3] = [
     blink1 as *const (),
@@ -16,24 +21,38 @@ static mut PCS: [*const (); 3] = [
 ];
 static mut SCHEDULER: SimpleRoundRobin = SimpleRoundRobin::new(unsafe { &mut PROCESSES });
 static mut STACKS: [[u8; 512]; 3] = [[0; 512], [0; 512], [0; 512]];
+static mut IDLE_STACK: [u8; 32] = [0; 32];
 
 #[entry]
 fn main() -> ! {
     bsp_init();
     unsafe {
-        for (i, p) in PROCESSES.iter_mut().enumerate() {
-            p.init(
+        for i in 0..PROCESSES.len() - 1 {
+            PROCESSES[i].init(
                 PIDS[i],
                 STACKS[i].as_mut_ptr() as usize,
                 STACKS[i].len(),
                 PCS[i] as usize,
             );
         }
+        PROCESSES.last_mut().unwrap().init(
+            usize::MAX,
+            IDLE_STACK.as_mut_ptr() as usize,
+            IDLE_STACK.len(),
+            idle_task as *const () as usize,
+        )
     }
 
     unsafe { yarr::init(&mut SCHEDULER, None, 32) };
 
     yarr::start()
+}
+
+fn idle_task() -> ! {
+    loop {
+        // sprintln!("idle");
+        yarr::yarr_wfi();
+    }
 }
 
 const GPIO_CTRL_ADDR: usize = 0x10012000;
@@ -59,9 +78,7 @@ fn blink1() -> ! {
             let mut state = mmio_read(GPIO_CTRL_ADDR, GPIO_REG_OUTPUT_VAL);
             state ^= RED_LED;
             mmio_write(GPIO_CTRL_ADDR, GPIO_REG_OUTPUT_VAL, state);
-            for _ in 0..10000000 {
-                core::arch::asm!("nop");
-            }
+            yarr::syscall::syscall_sleep_for(32768 * 2);
         }
     }
 }
@@ -72,9 +89,7 @@ fn blink2() -> ! {
             let mut state = mmio_read(GPIO_CTRL_ADDR, GPIO_REG_OUTPUT_VAL);
             state ^= GREEN_LED;
             mmio_write(GPIO_CTRL_ADDR, GPIO_REG_OUTPUT_VAL, state);
-            for _ in 0..5000000 {
-                core::arch::asm!("nop");
-            }
+            yarr::syscall::syscall_sleep_for(32768);
         }
     }
 }
@@ -85,9 +100,7 @@ fn blink3() -> ! {
             let mut state = mmio_read(GPIO_CTRL_ADDR, GPIO_REG_OUTPUT_VAL);
             state ^= BLUE_LED;
             mmio_write(GPIO_CTRL_ADDR, GPIO_REG_OUTPUT_VAL, state);
-            for _ in 0..2500000 {
-                core::arch::asm!("nop");
-            }
+            yarr::syscall::syscall_sleep_for(32768 / 2);
         }
     }
 }

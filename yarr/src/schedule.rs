@@ -27,7 +27,7 @@ impl Scheduler for SimpleRoundRobin {
             (*self.processes).iter_mut().for_each(|p| {
                 if let State::Sleeping(Sleep::Until(duration)) = p.state() {
                     let now = internal::time::machine_time();
-                    if *duration >= now {
+                    if *duration <= now {
                         p.set_state(State::Running);
                     }
                 }
@@ -86,7 +86,7 @@ impl Scheduler for SimpleRealTime {
             (*self.processes).iter_mut().for_each(|p| {
                 if let State::Sleeping(Sleep::Until(duration)) = p.state() {
                     let now = internal::time::machine_time();
-                    if *duration >= now {
+                    if *duration <= now {
                         p.set_state(State::Running);
                     }
                 }

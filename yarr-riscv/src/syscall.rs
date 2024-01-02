@@ -1,6 +1,7 @@
 use crate::{
     cpu::{Register, TrapFrame},
     process::Process,
+    time::machine_time,
 };
 
 extern "C" {
@@ -29,12 +30,13 @@ pub(crate) unsafe fn handle_syscall(mepc: usize, process: *mut Process) {
             {
                 let durationhi = frame.registers().get(Register::A0);
                 let durationlo = frame.registers().get(Register::A1);
-                (*process).sleep_for((durationhi as u64) << 32 | durationlo as u64);
+                let duration = (durationhi as u64) << 32 | durationlo as u64;
+                (*process).sleep_for(duration + machine_time());
             }
             #[cfg(target_arch = "riscv64")]
             {
                 let duration = frame.registers().get(Register::A0);
-                (*process).sleep_for(duration);
+                (*process).sleep_for(duration + machine_time());
             }
         }
         11 => {
