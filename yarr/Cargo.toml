@@ -14,5 +14,5 @@ categories = ["embedded", "no-std"]
 [dependencies]
 riscv = "0.10.1"
 riscv-rt = "0.11.0"
-yarr-common = { path = "../yarr-common", version = "*" }
-yarr-riscv = { path = "../yarr-riscv", optional = true, version = "*" }
+yarr-common = { path = "../yarr-common", version = "0.0.0" }
+yarr-riscv = { path = "../yarr-riscv", version = "0.0.0" }

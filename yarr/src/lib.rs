@@ -5,12 +5,12 @@ use schedule::Scheduler;
 pub mod schedule;
 pub mod syscall;
 
-#[cfg(feature = "yarr-riscv")]
+// #[cfg(feature = "yarr-riscv")]
 pub(crate) mod internal {
     pub(crate) use yarr_riscv::*;
 }
 
-#[cfg(feature = "yarr-riscv")]
+// #[cfg(feature = "yarr-riscv")]
 pub use yarr_riscv::yarr_wfi;
 
 pub mod cpu {
