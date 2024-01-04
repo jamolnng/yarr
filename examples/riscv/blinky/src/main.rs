@@ -51,10 +51,10 @@ fn main() -> ! {
 fn blink1() -> ! {
     loop {
         unsafe {
+            yarr::syscall::syscall_sleep_for(32768 * 2);
             let mut state = mmio_read(GPIO_CTRL_ADDR, GPIO_REG_OUTPUT_VAL);
             state ^= RED_LED;
             mmio_write(GPIO_CTRL_ADDR, GPIO_REG_OUTPUT_VAL, state);
-            yarr::syscall::syscall_sleep_for(32768 * 2);
         }
     }
 }
@@ -62,10 +62,10 @@ fn blink1() -> ! {
 fn blink2() -> ! {
     loop {
         unsafe {
+            yarr::syscall::syscall_sleep_for(32768);
             let mut state = mmio_read(GPIO_CTRL_ADDR, GPIO_REG_OUTPUT_VAL);
             state ^= GREEN_LED;
             mmio_write(GPIO_CTRL_ADDR, GPIO_REG_OUTPUT_VAL, state);
-            yarr::syscall::syscall_sleep_for(32768);
         }
     }
 }
@@ -73,10 +73,10 @@ fn blink2() -> ! {
 fn blink3() -> ! {
     loop {
         unsafe {
+            yarr::syscall::syscall_sleep_for(32768 / 2);
             let mut state = mmio_read(GPIO_CTRL_ADDR, GPIO_REG_OUTPUT_VAL);
             state ^= BLUE_LED;
             mmio_write(GPIO_CTRL_ADDR, GPIO_REG_OUTPUT_VAL, state);
-            yarr::syscall::syscall_sleep_for(32768 / 2);
         }
     }
 }
