@@ -84,6 +84,44 @@ impl Register {
     pub const T6: Register = Register::X31;
 }
 
+#[cfg(any(target_feature = "f", target_feature = "d"))]
+#[repr(usize)]
+#[derive(Clone, Copy, Debug)]
+pub enum FRegister {
+    F0 = 0,
+    F1,
+    F2,
+    F3,
+    F4,
+    F5,
+    F6,
+    F7,
+    F8,
+    F9,
+    F10,
+    F11,
+    F12,
+    F13,
+    F14,
+    F15,
+    F16,
+    F17,
+    F18,
+    F19,
+    F20,
+    F21,
+    F22,
+    F23,
+    F24,
+    F25,
+    F26,
+    F27,
+    F28,
+    F29,
+    F30,
+    F31,
+}
+
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct Registers {
@@ -151,18 +189,92 @@ impl Debug for Registers {
     }
 }
 
+#[cfg(any(target_feature = "f", target_feature = "d"))]
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct FRegisters {
+    regs: [usize; 32],
+}
+
+#[cfg(any(target_feature = "f", target_feature = "d"))]
+impl FRegisters {
+    pub const fn new() -> Self {
+        Self { regs: [0; 32] }
+    }
+
+    pub const fn from(sp: usize) -> Self {
+        let mut regs = [0; 32];
+        regs[Register::SP as usize] = sp;
+        Self { regs }
+    }
+
+    #[inline]
+    pub fn set(&mut self, reg: FRegister, val: usize) {
+        self.regs[reg as usize] = val;
+    }
+
+    #[inline]
+    pub fn get(&mut self, reg: FRegister) -> usize {
+        self.regs[reg as usize]
+    }
+}
+
+#[cfg(any(target_feature = "f", target_feature = "d"))]
+impl Debug for FRegisters {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("FRegisters")
+            .field("F0", &self.regs[FRegister::F0 as usize])
+            .field("F1", &self.regs[FRegister::F1 as usize])
+            .field("F2", &self.regs[FRegister::F2 as usize])
+            .field("F3", &self.regs[FRegister::F3 as usize])
+            .field("F4", &self.regs[FRegister::F4 as usize])
+            .field("F5", &self.regs[FRegister::F5 as usize])
+            .field("F6", &self.regs[FRegister::F6 as usize])
+            .field("F7", &self.regs[FRegister::F7 as usize])
+            .field("F8", &self.regs[FRegister::F8 as usize])
+            .field("F9", &self.regs[FRegister::F9 as usize])
+            .field("F10", &self.regs[FRegister::F10 as usize])
+            .field("F11", &self.regs[FRegister::F11 as usize])
+            .field("F12", &self.regs[FRegister::F12 as usize])
+            .field("F13", &self.regs[FRegister::F13 as usize])
+            .field("F14", &self.regs[FRegister::F14 as usize])
+            .field("F15", &self.regs[FRegister::F15 as usize])
+            .field("F16", &self.regs[FRegister::F16 as usize])
+            .field("F17", &self.regs[FRegister::F17 as usize])
+            .field("F18", &self.regs[FRegister::F18 as usize])
+            .field("F19", &self.regs[FRegister::F19 as usize])
+            .field("F20", &self.regs[FRegister::F20 as usize])
+            .field("F21", &self.regs[FRegister::F21 as usize])
+            .field("F22", &self.regs[FRegister::F22 as usize])
+            .field("F23", &self.regs[FRegister::F23 as usize])
+            .field("F24", &self.regs[FRegister::F24 as usize])
+            .field("F25", &self.regs[FRegister::F25 as usize])
+            .field("F26", &self.regs[FRegister::F26 as usize])
+            .field("F27", &self.regs[FRegister::F27 as usize])
+            .field("F28", &self.regs[FRegister::F28 as usize])
+            .field("F29", &self.regs[FRegister::F29 as usize])
+            .field("F30", &self.regs[FRegister::F30 as usize])
+            .field("F31", &self.regs[FRegister::F31 as usize])
+            .finish()
+    }
+}
+
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct TrapFrame {
     regs: Registers, // 0-31
-    pc: usize,       // 32
-    mode: CPUMode,   // 33
+    #[cfg(any(target_feature = "f", target_feature = "d"))]
+    fregs: FRegisters, // 32-63 w/ fregs
+    pc: usize,       // 32 w/o fregs | 64 w/ fregs
+    mode: CPUMode,   // 33 w/o fregs | 65 w/ fregs
 }
 
 impl TrapFrame {
     pub const fn new() -> Self {
         Self {
             regs: Registers::new(),
+            #[cfg(any(target_feature = "f", target_feature = "d"))]
+            fregs: FRegisters::new(),
             pc: 0,
             mode: CPUMode::Machine,
         }
@@ -176,6 +288,12 @@ impl TrapFrame {
     #[inline]
     pub fn registers(&mut self) -> &mut Registers {
         &mut self.regs
+    }
+
+    #[cfg(any(target_feature = "f", target_feature = "d"))]
+    #[inline]
+    pub fn fregisters(&mut self) -> &mut FRegisters {
+        &mut self.fregs
     }
 
     #[inline]
