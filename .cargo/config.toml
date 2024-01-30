@@ -1,0 +1,20 @@
+# [build]
+# target = "riscv32imac-unknown-none-elf"
+
+[target.'cfg(all(target_arch = "riscv32", target_os = "none"))']
+runner = "/opt/riscv/bin/riscv64-unknown-elf-gdb -q -x gdb_init"
+rustflags = [
+  "-C",
+  "link-arg=-Thifive1-link.x",
+  "-C",
+  "target-feature=+zicsr,+zifencei",
+]
+
+[target.'cfg(all(target_arch = "thumbv8m", target_os = "none"))']
+# runner = "/opt/riscv/bin/riscv64-unknown-elf-gdb -q -x gdb_init"
+# rustflags = [
+#   "-C",
+#   "link-arg=-Thifive1-link.x",
+#   "-C",
+#   "target-feature=+zicsr,+zifencei",
+# ]

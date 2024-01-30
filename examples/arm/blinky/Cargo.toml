@@ -1,0 +1,12 @@
+[package]
+name = "riscv-blinky"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[[bin]]
+name = "riscv-blinky"
+
+[dependencies]
+nrf-hal = "0.1.1"
+yarr = { path = "../../../yarr" }

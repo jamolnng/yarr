@@ -1,5 +1,5 @@
 [workspace]
-members = ["yarr", "yarr-common", "yarr-riscv", "examples/riscv/*"]
+members = ["yarr", "yarr-common", "yarr-riscv", "yarr-arm", "examples/riscv/*"]
 resolver = "2"
 
 [profile.release]
